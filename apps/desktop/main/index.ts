@@ -28,25 +28,15 @@ async function createWindow(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
-  let databaseUrl = process.env.DATABASE_URL;
-
+  // In development, the Branch API and its DB connection are owned by a
+  // separately-run `pnpm dev` process (see docs/04-electron-architecture.md
+  // §1), so Electron's main process has nothing to start or wait on here —
+  // it only needs to manage its own embedded Postgres + API process once
+  // packaged.
   if (shouldManageOwnPostgres()) {
-    databaseUrl = await startEmbeddedPostgres();
-  }
-
-  if (!databaseUrl) {
-    throw new Error(
-      'DATABASE_URL is not set. In development, run the branch-api dev DB script first (see apps/branch-api/scripts/dev-postgres.ts).',
-    );
-  }
-
-  if (shouldManageOwnPostgres()) {
-    // Packaged builds own the whole stack end to end, including their own API process.
+    const databaseUrl = await startEmbeddedPostgres();
     startBranchApi({ databaseUrl, port: BRANCH_API_PORT });
   }
-  // In development, the Branch API is started separately via `pnpm dev` (turbo runs it
-  // alongside the renderer) so it benefits from NestJS's own watch/hot-reload — see
-  // docs/04-electron-architecture.md §1 for why dev and packaged builds differ here.
 
   await createWindow();
 }

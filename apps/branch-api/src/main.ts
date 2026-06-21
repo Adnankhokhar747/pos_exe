@@ -8,6 +8,11 @@ import { AppModule } from './app.module';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  // The renderer calls this API cross-origin: Vite dev server (http://localhost:5173)
+  // or a packaged Electron window (file://) vs. this API on 127.0.0.1. Reflecting the
+  // request origin is safe here since the API only ever binds to 127.0.0.1 (see below)
+  // and is never reachable from outside the device.
+  app.enableCors({ origin: true, credentials: true });
 
   const port = Number(process.env.BRANCH_API_PORT ?? 4000);
   await app.listen(port, '127.0.0.1');
