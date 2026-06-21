@@ -15,7 +15,12 @@ const PERMISSION_CATALOG: Array<{ code: string; module: string; description: str
   { code: 'discount.override', module: 'discount', description: 'Override the discount ceiling' },
   { code: 'product.write', module: 'product', description: 'Create or edit products' },
   { code: 'stock.adjust', module: 'inventory', description: 'Post a stock adjustment' },
-  { code: 'purchase.approve', module: 'purchase', description: 'Approve a purchase order' },
+  { code: 'stock.transfer', module: 'inventory', description: 'Create, dispatch, and receive stock transfers' },
+  { code: 'purchase.create', module: 'purchase', description: 'Create purchase orders, goods receipts, and supplier invoices/payments' },
+  { code: 'purchase.approve', module: 'purchase', description: 'Approve (send) a purchase order' },
+  { code: 'customer.write', module: 'customer', description: 'Create or edit customers and record customer payments' },
+  { code: 'supplier.write', module: 'supplier', description: 'Create or edit suppliers' },
+  { code: 'accounting.write', module: 'accounting', description: 'Record expenses, income, and daily closings' },
   { code: 'report.financial.view', module: 'report', description: 'View financial reports' },
   { code: 'settings.write', module: 'settings', description: 'Edit system settings' },
   { code: 'user.manage', module: 'user', description: 'Manage users and roles' },
@@ -111,11 +116,21 @@ async function main(): Promise<void> {
       create: { tenantId: tenant.id, categoryId: category.id, ...productSeed },
     });
 
+    const existingStockLevel = await prisma.stockLevel.findUnique({
+      where: { warehouseId_productId: { warehouseId: warehouse.id, productId: product.id } },
+    });
+
     await prisma.stockLevel.upsert({
       where: { warehouseId_productId: { warehouseId: warehouse.id, productId: product.id } },
       update: {},
       create: { warehouseId: warehouse.id, productId: product.id, quantityOnHand: '100' },
     });
+
+    // The stockLevel upsert above is a no-op on a re-seed (empty `update`), so the
+    // matching ledger entry must be skipped too — otherwise re-running this script
+    // inserts a ledger row with no corresponding stock_level change, breaking the
+    // "ledger replays to stock_levels" invariant from docs/01-database-design.md §6.
+    if (existingStockLevel) continue;
 
     await prisma.stockLedgerEntry.create({
       data: {
