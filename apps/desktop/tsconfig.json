@@ -1,0 +1,9 @@
+{
+  "extends": "../../tooling/tsconfig-base/node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "."
+  },
+  "include": ["main/**/*.ts", "preload/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,28 @@
+appId: com.vantagepos.desktop
+productName: Vantage POS
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+extraResources:
+  - from: ../branch-api/dist
+    to: branch-api
+  - from: ../renderer/dist
+    to: renderer
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  # EV code signing wired up in CI per docs/14-windows-exe-build-strategy.md §4 —
+  # left unset here since the signing identity is a CI secret, not a repo file.
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+publish:
+  - provider: generic
+    url: https://updates.vantagepos.example.com
+    channel: stable
