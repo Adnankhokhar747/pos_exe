@@ -25,6 +25,9 @@ export class GoodsReceiptsService {
               productId: line.productId,
               quantityReceived: new Prisma.Decimal(line.quantityReceived),
               unitCost: new Prisma.Decimal(line.unitCost),
+              batchNo: line.batchNo,
+              expiryDate: line.expiryDate ? new Date(line.expiryDate) : undefined,
+              serialNumbers: line.serialNumbers,
             })),
           },
         },
@@ -52,6 +55,32 @@ export class GoodsReceiptsService {
           update: { quantityOnHand: { increment: quantity } },
           create: { warehouseId: dto.warehouseId, productId: line.productId, quantityOnHand: quantity },
         });
+
+        if (line.batchNo) {
+          await tx.batch.upsert({
+            where: { productId_warehouseId_batchNo: { productId: line.productId, warehouseId: dto.warehouseId, batchNo: line.batchNo } },
+            update: { quantityOnHand: { increment: quantity }, costPrice: unitCost },
+            create: {
+              productId: line.productId,
+              warehouseId: dto.warehouseId,
+              batchNo: line.batchNo,
+              expiryDate: line.expiryDate ? new Date(line.expiryDate) : undefined,
+              quantityOnHand: quantity,
+              costPrice: unitCost,
+            },
+          });
+        }
+
+        if (line.serialNumbers?.length) {
+          await tx.serialNumber.createMany({
+            data: line.serialNumbers.map((serialNo) => ({
+              productId: line.productId,
+              warehouseId: dto.warehouseId,
+              serialNo,
+              status: 'in_stock' as const,
+            })),
+          });
+        }
       }
 
       if (dto.purchaseOrderId) {

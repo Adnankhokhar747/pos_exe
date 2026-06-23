@@ -14,6 +14,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly detail: string,
+    public readonly code: string = '',
   ) {
     super(detail);
   }
@@ -32,7 +33,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!response.ok) {
     const problem = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, problem.detail ?? 'Request failed.');
+    throw new ApiError(response.status, problem.detail ?? problem.message ?? 'Request failed.', problem.title ?? '');
   }
 
   if (response.status === 204) return undefined as T;

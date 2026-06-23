@@ -7,7 +7,7 @@ Main Process (Node.js)
   - App lifecycle, window management, auto-updater, native menus, global shortcuts
   - Hosts the embedded Branch API (NestJS) as an in-process HTTP server bound to 127.0.0.1:<dynamic-port>
   - Owns the embedded Postgres lifecycle (start/stop/health-check the bundled Postgres binary)
-  - Owns native integrations: USB HID barcode listener, ESC/POS printer/cash-drawer driver, license-key secure storage (OS keychain via `keytar`)
+  - Owns native integrations: USB HID barcode listener, OS-print-driver printing (thermal receipts + A4/PDF invoices via Electron's `webContents.print()`/`printToPDF()`/`getPrintersAsync()`), license-key secure storage (OS keychain via `keytar`)
   - Owns the Sync Engine worker (push/pull loop, conflict resolution)
 Preload Script (contextBridge)
   - Exposes a narrow, typed IPC API to the renderer (`window.vantage.*`) — no direct Node/fs/child_process access from renderer
@@ -29,8 +29,8 @@ Why an embedded HTTP API rather than pure IPC for data access: it keeps the rend
 ## 3. Native Integrations
 
 - **Barcode scanner**: USB HID scanners present as a keyboard. A global `keydown` listener (scoped to the POS screen) buffers keystrokes and flushes as a "scan" when inter-keystroke interval is below a threshold (~30ms) and ends in the scanner's configured terminator (commonly Enter) — distinguishes scanner bursts from human typing without a special driver.
-- **Receipt/label printing**: ESC/POS commands sent via a native printing bridge (`node-thermal-printer` or direct raw USB/serial via `node-usb`/`node-serialport` depending on connection type); A4/PDF invoices rendered via a headless Chromium print-to-PDF (Electron's built-in `webContents.printToPDF`).
-- **Cash drawer**: drawer-kick pulse sent as an ESC/POS command through the assigned receipt printer (standard RJ11 kick-out wiring) — no separate drawer driver needed for the common case; a generic serial/relay driver is plugin-extensible for non-standard drawers.
+- **Receipt/label printing**: routed entirely through Electron's OS print-driver APIs — no raw ESC/POS byte protocol, no `node-thermal-printer`/`node-usb`/`node-serialport`. The main process exposes three IPC channels (`printing:list-printers`, `printing:print-html`, `printing:print-to-pdf`) backed by `BrowserWindow.webContents.getPrintersAsync()`, `.print()`, and `.printToPDF()` against a hidden, off-screen `BrowserWindow` that loads a generated HTML receipt/invoice document. Thermal receipts (80mm/58mm) and A4 invoices share the same pipeline — only the HTML template and the printer's registered paper size differ. Printer selection, default-printer-per-role (receipt vs. invoice), and receipt header/footer/paper-width customization are stored in `Printer`/`ReceiptSettings` tables (per branch/tenant) and surfaced in Settings → Printing. PDF invoices are saved via `printToPDF()` plus a user-driven `dialog.showSaveDialog()` — no silent file writes.
+- **Cash drawer**: **deferred, not implemented.** Drawer-kick requires a raw out-of-band byte sequence sent directly to the printer's cash-drawer pins (the standard ESC/POS drawer-kick command via RJ11 wiring), which has no equivalent in Electron's OS print-driver surface (`webContents.print()`/`printToPDF()`/`getPrintersAsync()`) — adding it would mean reintroducing a raw ESC/POS/USB/serial code path, which directly contradicts the OS-driver-only printing decision above. Until a dedicated drawer-kick mechanism is scoped (e.g., a small native helper process or a printer-vendor SDK), drawer opening is manual, via the printer/till hardware's own kick button.
 - **License key storage**: license token cached via `keytar` (OS-native credential store), never in plaintext on disk, never in `localStorage`.
 
 ## 4. Offline Sync Engine

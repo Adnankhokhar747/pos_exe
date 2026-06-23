@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNumberString, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsISO8601, IsNumberString, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class GoodsReceiptLineDto {
   @IsString()
@@ -10,6 +10,19 @@ export class GoodsReceiptLineDto {
 
   @IsNumberString()
   unitCost!: string;
+
+  @IsOptional()
+  @IsString()
+  batchNo?: string;
+
+  @IsOptional()
+  @IsISO8601()
+  expiryDate?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  serialNumbers?: string[];
 }
 
 export class CreateGoodsReceiptDto {

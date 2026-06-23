@@ -1,4 +1,4 @@
-import { IsNumberString, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNumberString, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -28,4 +28,28 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumberString()
   taxRatePct?: string;
+
+  @IsOptional()
+  @IsString()
+  taxTemplateId?: string;
+
+  @IsOptional()
+  @IsString()
+  parentProductId?: string;
+
+  @IsOptional()
+  @IsObject()
+  variantAttributes?: Record<string, string>;
+
+  @IsOptional()
+  @IsBoolean()
+  isBundle?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  trackBatches?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  trackSerials?: boolean;
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, Query, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, NotFoundException, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { Invoice } from '@prisma/client';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -7,13 +7,14 @@ import { VoidInvoiceDto } from './dto/void-invoice.dto';
 import { CreateReturnDto } from './dto/create-return.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
+import { LicenseGuard } from '../licensing/license.guard';
 import { RequirePermission } from '../../common/auth/require-permission.decorator';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../common/auth/types';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Controller('api/v1/invoices')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, LicenseGuard, PermissionsGuard)
 export class InvoicesController {
   constructor(
     private readonly invoicesService: InvoicesService,
@@ -71,10 +72,12 @@ export class InvoicesController {
   }
 
   @Get(':id')
-  async getInvoice(@Param('id') id: string): Promise<Invoice & { lines: unknown[]; payments: unknown[] }> {
+  async getInvoice(
+    @Param('id') id: string,
+  ): Promise<Invoice & { lines: unknown[]; payments: unknown[]; customer: unknown }> {
     const invoice = await this.prisma.invoice.findUnique({
       where: { id },
-      include: { lines: { include: { product: true } }, payments: true },
+      include: { lines: { include: { product: true } }, payments: true, customer: true },
     });
     if (!invoice) throw new NotFoundException(`Invoice ${id} not found.`);
     return invoice;

@@ -1,0 +1,168 @@
+import { type ReactNode } from 'react';
+import {
+  Alert,
+  AppBar,
+  Box,
+  Divider,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  ListSubheader,
+  Toolbar,
+  Typography,
+} from '@mui/material';
+import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
+import PeopleIcon from '@mui/icons-material/People';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import CategoryIcon from '@mui/icons-material/Category';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../state/auth-context';
+import { useLicense } from '../state/license-context';
+import { SecondaryButton } from '../components/buttons';
+import type { WarningLevel } from '../api/types';
+
+interface NavItem {
+  path: string;
+  label: string;
+  icon: ReactNode;
+  requiredPermission?: string;
+}
+
+const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
+  {
+    label: 'Sales',
+    items: [{ path: '/pos', label: 'POS Terminal', icon: <PointOfSaleIcon /> }],
+  },
+  {
+    label: 'Catalog & Stock',
+    items: [
+      { path: '/catalog', label: 'Catalog', icon: <CategoryIcon />, requiredPermission: 'product.write' },
+      { path: '/inventory', label: 'Inventory', icon: <InventoryIcon />, requiredPermission: 'stock.adjust' },
+      { path: '/promotions', label: 'Promotions', icon: <LocalOfferIcon />, requiredPermission: 'settings.write' },
+    ],
+  },
+  {
+    label: 'Partners & Buying',
+    items: [
+      { path: '/customers', label: 'Customers', icon: <PeopleIcon />, requiredPermission: 'customer.write' },
+      { path: '/suppliers', label: 'Suppliers', icon: <LocalShippingIcon />, requiredPermission: 'supplier.write' },
+      { path: '/purchasing', label: 'Purchasing', icon: <ShoppingCartIcon />, requiredPermission: 'purchase.create' },
+    ],
+  },
+  {
+    label: 'Insights',
+    items: [
+      { path: '/reports', label: 'Reports', icon: <AssessmentIcon />, requiredPermission: 'report.financial.view' },
+      { path: '/accounting', label: 'Accounting', icon: <AccountBalanceIcon />, requiredPermission: 'accounting.write' },
+    ],
+  },
+  {
+    label: 'System',
+    items: [{ path: '/settings', label: 'Settings', icon: <SettingsIcon /> }],
+  },
+];
+
+const BANNER_SEVERITY: Record<Exclude<WarningLevel, 'none'>, 'info' | 'warning' | 'error'> = {
+  info: 'info',
+  warning: 'warning',
+  critical: 'error',
+};
+
+const DRAWER_WIDTH = 232;
+
+export function AppShell({ children }: { children: ReactNode }): JSX.Element {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { status } = useLicense();
+
+  const permissions = user?.permissions ?? [];
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.requiredPermission || permissions.includes(item.requiredPermission)),
+  })).filter((group) => group.items.length > 0);
+
+  return (
+    <Box display="flex" flexDirection="column" height="100vh">
+      {status && status.warningLevel !== 'none' && (
+        <Alert severity={BANNER_SEVERITY[status.warningLevel]} sx={{ borderRadius: 0 }}>
+          {status.message}
+        </Alert>
+      )}
+      <Box display="flex" flex={1} minHeight={0}>
+        <Drawer
+          variant="permanent"
+          sx={{ width: DRAWER_WIDTH, '& .MuiDrawer-paper': { width: DRAWER_WIDTH, borderRight: '1px solid', borderColor: 'divider', position: 'relative' } }}
+        >
+          <Toolbar>
+            <Typography variant="h6">Vantage POS</Typography>
+          </Toolbar>
+          <Box flex={1} overflow="auto" px={1}>
+            {visibleGroups.map((group, groupIdx) => (
+              <Box key={group.label} mb={0.5}>
+                {groupIdx > 0 && <Divider sx={{ my: 1 }} />}
+                <List
+                  dense
+                  subheader={
+                    <ListSubheader sx={{ lineHeight: 2, fontSize: '0.7rem', fontWeight: 700, letterSpacing: 0.5 }}>
+                      {group.label.toUpperCase()}
+                    </ListSubheader>
+                  }
+                >
+                  {group.items.map((item) => {
+                    const active = location.pathname.startsWith(item.path);
+                    return (
+                      <ListItemButton
+                        key={item.path}
+                        selected={active}
+                        onClick={() => navigate(item.path)}
+                        sx={{
+                          borderRadius: 1.5,
+                          mb: 0.25,
+                          borderLeft: '3px solid',
+                          borderLeftColor: active ? 'primary.main' : 'transparent',
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36, color: active ? 'primary.main' : 'inherit' }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.label}
+                          primaryTypographyProps={{ fontWeight: active ? 700 : 500 }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
+              </Box>
+            ))}
+          </Box>
+        </Drawer>
+        <Box flex={1} display="flex" flexDirection="column" minWidth={0}>
+          <AppBar position="static" color="default" elevation={1}>
+            <Toolbar sx={{ gap: 2 }}>
+              <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
+                {user?.branchName}
+              </Typography>
+              <Typography variant="body2">{user?.fullName}</Typography>
+              <SecondaryButton size="small" onClick={logout}>
+                Sign out
+              </SecondaryButton>
+            </Toolbar>
+          </AppBar>
+          <Box flex={1} overflow="auto">
+            {children}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+}

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { AccountingService, ProfitSummary } from './accounting.service';
 import {
   CreateDailyClosingDto,
@@ -8,12 +8,13 @@ import {
 } from './dto/create-expense.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
+import { LicenseGuard } from '../licensing/license.guard';
 import { RequirePermission } from '../../common/auth/require-permission.decorator';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../common/auth/types';
 
 @Controller('api/v1')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, LicenseGuard, PermissionsGuard)
 export class AccountingController {
   constructor(private readonly accountingService: AccountingService) {}
 

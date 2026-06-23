@@ -10,6 +10,12 @@ import { PurchasingModule } from './modules/purchasing/purchasing.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { AccountingModule } from './modules/accounting/accounting.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { PrintingModule } from './modules/printing/printing.module';
+import { LicensingModule } from './modules/licensing/licensing.module';
+import { PlatformModule } from './modules/platform/platform.module';
+import { UsersModule } from './modules/users/users.module';
+import { BranchesModule } from './modules/branches/branches.module';
 import { HealthController } from './modules/health/health.controller';
 import { DomainExceptionFilter } from './common/filters/domain-exception.filter';
 
@@ -25,6 +31,12 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter'
     InventoryModule,
     AccountingModule,
     ReportsModule,
+    SettingsModule,
+    PrintingModule,
+    LicensingModule,
+    PlatformModule,
+    UsersModule,
+    BranchesModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_FILTER, useClass: DomainExceptionFilter }],

@@ -38,3 +38,66 @@ export class PaymentMismatchError extends DomainException {
     super(`Grand total ${grandTotal} does not match total payments ${paid}.`);
   }
 }
+
+export class InvalidCouponError extends DomainException {
+  readonly code = 'invalid_coupon';
+  readonly httpStatus = 422;
+
+  constructor(code: string, reason: string) {
+    super(`Coupon ${code} cannot be applied: ${reason}.`);
+  }
+}
+
+export class InvalidGiftCardError extends DomainException {
+  readonly code = 'invalid_gift_card';
+  readonly httpStatus = 422;
+
+  constructor(code: string, reason: string) {
+    super(`Gift card ${code} cannot be used: ${reason}.`);
+  }
+}
+
+export class InsufficientLoyaltyPointsError extends DomainException {
+  readonly code = 'insufficient_loyalty_points';
+  readonly httpStatus = 422;
+
+  constructor(available: string, requested: string) {
+    super(`Insufficient loyalty points: available ${available}, requested ${requested}.`);
+  }
+}
+
+export class SerialNumberUnavailableError extends DomainException {
+  readonly code = 'serial_number_unavailable';
+  readonly httpStatus = 409;
+
+  constructor(serialNo: string) {
+    super(`Serial number ${serialNo} is not available in stock.`);
+  }
+}
+
+export class InsufficientBatchStockError extends DomainException {
+  readonly code = 'insufficient_batch_stock';
+  readonly httpStatus = 409;
+
+  constructor(productId: string, available: string, requested: string) {
+    super(`Insufficient batch-tracked stock for product ${productId}: available ${available}, requested ${requested}.`);
+  }
+}
+
+export class LicenseBlockedError extends DomainException {
+  readonly code = 'license_blocked';
+  readonly httpStatus = 403;
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class LimitExceededError extends DomainException {
+  readonly code = 'limit_exceeded';
+  readonly httpStatus = 409;
+
+  constructor(message: string) {
+    super(message);
+  }
+}

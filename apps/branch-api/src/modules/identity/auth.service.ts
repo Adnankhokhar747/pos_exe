@@ -12,6 +12,9 @@ export interface LoginResult {
     username: string;
     fullName: string;
     permissions: string[];
+    branchId: string;
+    branchName: string;
+    warehouseId: string;
   };
 }
 
@@ -49,6 +52,20 @@ export class AuthService {
       ),
     );
 
+    // The renderer used to read ACTIVE_BRANCH_ID/ACTIVE_WAREHOUSE_ID from a build-time
+    // env var, which only works for one branch baked into one build — a hard blocker
+    // once a single branch-api/renderer build serves multiple tenants. Resolving the
+    // user's branch (and its default warehouse) live at login lets the same build work
+    // for any tenant/branch.
+    const branch = await this.prisma.branch.findFirstOrThrow({
+      where: { tenantId: user.tenantId },
+      orderBy: { createdAt: 'asc' },
+    });
+    const warehouse = await this.prisma.warehouse.findFirstOrThrow({
+      where: { branchId: branch.id },
+      orderBy: { isDefault: 'desc' },
+    });
+
     const payload: AccessTokenPayload = {
       sub: user.id,
       tenantId: user.tenantId,
@@ -63,6 +80,9 @@ export class AuthService {
         username: user.username,
         fullName: user.fullName,
         permissions,
+        branchId: branch.id,
+        branchName: branch.name,
+        warehouseId: warehouse.id,
       },
     };
   }

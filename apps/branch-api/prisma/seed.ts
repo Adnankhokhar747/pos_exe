@@ -25,7 +25,25 @@ const PERMISSION_CATALOG: Array<{ code: string; module: string; description: str
   { code: 'settings.write', module: 'settings', description: 'Edit system settings' },
   { code: 'user.manage', module: 'user', description: 'Manage users and roles' },
   { code: 'plugin.manage', module: 'plugin', description: 'Install/activate/deactivate plugins' },
+  { code: 'pos.sale.viewAll', module: 'pos', description: 'View every sale in the branch, not just sales the user created' },
 ];
+
+// Tenant-scoped system roles seeded for every company. Cashier/Inventory Manager/
+// Accountant are deliberately narrow (docs/00-functional-specification.md RBAC matrix);
+// Company Admin gets the full permission catalog.
+const SYSTEM_ROLE_PERMISSIONS: Record<string, string[] | 'ALL'> = {
+  'Company Admin': 'ALL',
+  Cashier: ['pos.sale.create', 'customer.write'],
+  'Inventory Manager': [
+    'product.write',
+    'stock.adjust',
+    'stock.transfer',
+    'purchase.create',
+    'purchase.approve',
+    'supplier.write',
+  ],
+  Accountant: ['report.financial.view', 'accounting.write', 'customer.write', 'supplier.write'],
+};
 
 async function main(): Promise<void> {
   for (const permission of PERMISSION_CATALOG) {
@@ -46,6 +64,12 @@ async function main(): Promise<void> {
     },
   });
 
+  await prisma.currency.upsert({
+    where: { code: 'USD' },
+    update: {},
+    create: { code: 'USD', name: 'US Dollar', symbol: '$', decimalPlaces: 2 },
+  });
+
   const branch = await prisma.branch.upsert({
     where: { tenantId_code: { tenantId: tenant.id, code: 'MAIN' } },
     update: {},
@@ -63,20 +87,31 @@ async function main(): Promise<void> {
     create: { id: '00000000-0000-0000-0000-000000000010', branchId: branch.id, name: 'Main Warehouse' },
   });
 
-  const superAdminRole = await prisma.role.upsert({
-    where: { tenantId_name: { tenantId: tenant.id, name: 'Super Admin' } },
-    update: {},
-    create: { tenantId: tenant.id, name: 'Super Admin', isSystemRole: true },
-  });
-
   const allPermissions = await prisma.permission.findMany();
-  for (const permission of allPermissions) {
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: superAdminRole.id, permissionId: permission.id } },
+  const rolesByName = new Map<string, { id: string }>();
+  for (const [roleName, permissionCodes] of Object.entries(SYSTEM_ROLE_PERMISSIONS)) {
+    const role = await prisma.role.upsert({
+      where: { tenantId_name: { tenantId: tenant.id, name: roleName } },
       update: {},
-      create: { roleId: superAdminRole.id, permissionId: permission.id },
+      create: { tenantId: tenant.id, name: roleName, isSystemRole: true },
     });
+    rolesByName.set(roleName, role);
+
+    const grantedPermissions =
+      permissionCodes === 'ALL'
+        ? allPermissions
+        : allPermissions.filter((permission) => permissionCodes.includes(permission.code));
+
+    for (const permission of grantedPermissions) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+        update: {},
+        create: { roleId: role.id, permissionId: permission.id },
+      });
+    }
   }
+
+  const companyAdminRole = rolesByName.get('Company Admin')!;
 
   const passwordHash = await argon2.hash('Admin123!');
   const adminUser = await prisma.user.upsert({
@@ -92,10 +127,64 @@ async function main(): Promise<void> {
   });
 
   await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: adminUser.id, roleId: superAdminRole.id } },
+    where: { userId_roleId: { userId: adminUser.id, roleId: companyAdminRole.id } },
     update: {},
-    create: { userId: adminUser.id, roleId: superAdminRole.id },
+    create: { userId: adminUser.id, roleId: companyAdminRole.id },
   });
+
+  const basicPlan = await prisma.plan.upsert({
+    where: { name: 'Basic' },
+    update: {},
+    create: { name: 'Basic', userLimit: 2, invoiceLimit: 1000, branchLimit: 1 },
+  });
+  const professionalPlan = await prisma.plan.upsert({
+    where: { name: 'Professional' },
+    update: {},
+    create: { name: 'Professional', userLimit: 10, invoiceLimit: 10000, branchLimit: 5 },
+  });
+  const enterprisePlan = await prisma.plan.upsert({
+    where: { name: 'Enterprise' },
+    update: {},
+    create: { name: 'Enterprise', userLimit: null, invoiceLimit: null, branchLimit: null },
+  });
+  // basicPlan/professionalPlan exist so the admin portal has more than one plan to
+  // assign new companies to; the demo tenant itself is seeded on Enterprise so this
+  // script's own exit criterion (log in and use the app) is never blocked by a limit.
+  void basicPlan;
+  void professionalPlan;
+
+  const oneYearOut = new Date();
+  oneYearOut.setFullYear(oneYearOut.getFullYear() + 1);
+  await prisma.tenantSubscription.upsert({
+    where: { tenantId: tenant.id },
+    update: {},
+    create: {
+      tenantId: tenant.id,
+      planId: enterprisePlan.id,
+      startDate: new Date(),
+      expiryDate: oneYearOut,
+    },
+  });
+
+  const platformAdminPasswordHash = await argon2.hash('SuperAdmin123!');
+  await prisma.platformAdmin.upsert({
+    where: { username: 'superadmin' },
+    update: {},
+    create: {
+      username: 'superadmin',
+      fullName: 'Platform Super Admin',
+      passwordHash: platformAdminPasswordHash,
+    },
+  });
+
+  const existingCashCustomer = await prisma.customer.findFirst({
+    where: { tenantId: tenant.id, isWalkIn: true },
+  });
+  if (!existingCashCustomer) {
+    await prisma.customer.create({
+      data: { tenantId: tenant.id, name: 'Cash Customer', isWalkIn: true },
+    });
+  }
 
   const category = await prisma.category.upsert({
     where: { id: '00000000-0000-0000-0000-000000000020' },
@@ -145,6 +234,8 @@ async function main(): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.log('Seed complete. Login with username "admin", password "Admin123!".');
+  // eslint-disable-next-line no-console
+  console.log('Super Admin Portal login: username "superadmin", password "SuperAdmin123!".');
 }
 
 main()

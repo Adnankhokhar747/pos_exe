@@ -1,0 +1,45 @@
+import type { Invoice } from '../api/types';
+
+export const TEST_INVOICE_FIXTURE: Invoice = {
+  id: 'test-fixture',
+  invoiceNo: 'TEST-0001',
+  invoiceType: 'sale',
+  status: 'completed',
+  customerId: null,
+  customer: null,
+  subtotal: '19.98',
+  discountTotal: '0.00',
+  taxTotal: '1.60',
+  grandTotal: '21.58',
+  heldLabel: null,
+  currencyCode: null,
+  exchangeRateToBase: null,
+  loyaltyPointsEarned: '0',
+  loyaltyPointsRedeemed: '0',
+  couponCode: null,
+  couponDiscountAmount: '0.00',
+  createdAt: new Date().toISOString(),
+  lines: [
+    {
+      id: 'test-line-1',
+      productId: 'test-product-1',
+      quantity: '2',
+      unitPrice: '9.99',
+      discountValue: '0.00',
+      taxAmount: '1.60',
+      lineTotal: '21.58',
+      product: { name: 'Sample Product' },
+    },
+  ],
+  payments: [
+    {
+      id: 'test-payment-1',
+      invoiceId: 'test-fixture',
+      method: 'cash',
+      amount: '21.58',
+      receivedAmount: '25.00',
+      changeAmount: '3.42',
+      reference: null,
+    },
+  ],
+};

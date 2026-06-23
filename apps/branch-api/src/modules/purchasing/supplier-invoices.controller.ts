@@ -1,13 +1,14 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { SupplierInvoice } from '@prisma/client';
 import { SupplierInvoicesService } from './supplier-invoices.service';
 import { CreateSupplierInvoiceDto } from './dto/create-supplier-invoice.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
+import { LicenseGuard } from '../licensing/license.guard';
 import { RequirePermission } from '../../common/auth/require-permission.decorator';
 
 @Controller('api/v1/supplier-invoices')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, LicenseGuard, PermissionsGuard)
 export class SupplierInvoicesController {
   constructor(private readonly supplierInvoicesService: SupplierInvoicesService) {}
 

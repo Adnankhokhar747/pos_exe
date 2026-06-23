@@ -5,6 +5,7 @@ import { ThemeProvider, CssBaseline } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { AuthProvider } from './state/auth-context';
+import { LicenseProvider } from './state/license-context';
 import { createAppTheme } from './theme/theme';
 import './styles.css';
 
@@ -17,9 +18,11 @@ function Root(): JSX.Element {
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <LicenseProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </LicenseProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

@@ -1,0 +1,7 @@
+{
+  "extends": "../../tooling/tsconfig-base/react.json",
+  "compilerOptions": {
+    "baseUrl": "./src"
+  },
+  "include": ["src"]
+}

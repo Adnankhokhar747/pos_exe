@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, PrismaClient, Supplier, SupplierLedgerEntryType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
+import { UpdateSupplierDto } from './dto/update-supplier.dto';
 
 type Tx = Prisma.TransactionClient | PrismaClient;
 
@@ -13,10 +14,11 @@ export class SuppliersService {
     return this.prisma.supplier.create({ data: { tenantId, ...dto } });
   }
 
-  list(tenantId: string, search?: string): Promise<Supplier[]> {
+  list(tenantId: string, search?: string, includeInactive = false): Promise<Supplier[]> {
     return this.prisma.supplier.findMany({
       where: {
         tenantId,
+        ...(includeInactive ? {} : { isActive: true }),
         ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
       },
       orderBy: { name: 'asc' },
@@ -26,6 +28,14 @@ export class SuppliersService {
 
   findOne(tenantId: string, id: string): Promise<Supplier | null> {
     return this.prisma.supplier.findFirst({ where: { id, tenantId } });
+  }
+
+  update(tenantId: string, id: string, dto: UpdateSupplierDto): Promise<Supplier> {
+    return this.prisma.supplier.update({ where: { id }, data: { ...dto } });
+  }
+
+  deactivate(tenantId: string, id: string): Promise<Supplier> {
+    return this.prisma.supplier.update({ where: { id }, data: { isActive: false } });
   }
 
   getLedger(supplierId: string) {

@@ -1,14 +1,15 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { CashDrawerSession } from '@prisma/client';
 import { CashDrawerSessionsService } from './cash-drawer-sessions.service';
 import { OpenCashDrawerDto, CloseCashDrawerDto } from './dto/cash-drawer.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
+import { LicenseGuard } from '../licensing/license.guard';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../common/auth/types';
 
 @Controller('api/v1/cash-drawer-sessions')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, LicenseGuard, PermissionsGuard)
 export class CashDrawerSessionsController {
   constructor(private readonly cashDrawerSessionsService: CashDrawerSessionsService) {}
 

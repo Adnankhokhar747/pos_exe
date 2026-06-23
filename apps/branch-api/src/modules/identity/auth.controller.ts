@@ -4,6 +4,7 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../common/auth/types';
+import { LicenseGuard } from '../licensing/license.guard';
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -15,7 +16,7 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, LicenseGuard)
   me(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
     return user;
   }

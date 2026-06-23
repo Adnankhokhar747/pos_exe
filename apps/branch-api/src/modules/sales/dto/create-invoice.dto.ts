@@ -22,11 +22,28 @@ export class InvoiceLineDto {
   @IsOptional()
   @IsNumberString()
   discountValue?: string;
+
+  // Required when the product has trackSerials enabled — one serial per unit sold.
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  serialNumbers?: string[];
 }
 
+const PAYMENT_METHODS = [
+  'cash',
+  'debit_card',
+  'credit_card',
+  'bank_transfer',
+  'mobile_wallet',
+  'credit_sale',
+  'store_credit',
+  'gift_card',
+] as const;
+
 export class InvoicePaymentDto {
-  @IsIn(['cash', 'debit_card', 'credit_card', 'bank_transfer', 'mobile_wallet', 'credit_sale'])
-  method!: 'cash' | 'debit_card' | 'credit_card' | 'bank_transfer' | 'mobile_wallet' | 'credit_sale';
+  @IsIn(PAYMENT_METHODS)
+  method!: (typeof PAYMENT_METHODS)[number];
 
   @IsNumberString()
   amount!: string;
@@ -35,6 +52,7 @@ export class InvoicePaymentDto {
   @IsNumberString()
   receivedAmount?: string;
 
+  // For method 'gift_card', this is the redeemed gift card's code.
   @IsOptional()
   @IsString()
   reference?: string;
@@ -66,4 +84,16 @@ export class CreateInvoiceDto {
   @ValidateNested({ each: true })
   @Type(() => InvoicePaymentDto)
   payments!: InvoicePaymentDto[];
+
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  loyaltyPointsToRedeem?: string;
+
+  @IsOptional()
+  @IsString()
+  currencyCode?: string;
 }
