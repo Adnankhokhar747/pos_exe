@@ -3,6 +3,7 @@ import { LoginPage } from './pages/LoginPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { PlansPage } from './pages/PlansPage';
 import { AlertsPage } from './pages/AlertsPage';
+import { ModulesPage } from './pages/ModulesPage';
 import { AppShell } from './layout/AppShell';
 import { useAuth } from './state/auth-context';
 
@@ -37,6 +38,14 @@ export function App(): JSX.Element {
         element={
           <RequireAuth>
             <AlertsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/modules"
+        element={
+          <RequireAuth>
+            <ModulesPage />
           </RequireAuth>
         }
       />

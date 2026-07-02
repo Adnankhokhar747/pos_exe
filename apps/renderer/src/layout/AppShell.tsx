@@ -23,9 +23,15 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import CategoryIcon from '@mui/icons-material/Category';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import SettingsIcon from '@mui/icons-material/Settings';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import BadgeIcon from '@mui/icons-material/Badge';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
+import SummarizeIcon from '@mui/icons-material/Summarize';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth-context';
 import { useLicense } from '../state/license-context';
+import { useModules } from '../state/modules-context';
 import { SecondaryButton } from '../components/buttons';
 import type { WarningLevel } from '../api/types';
 
@@ -34,6 +40,7 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   requiredPermission?: string;
+  requiredModule?: string;
 }
 
 const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
@@ -65,6 +72,16 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     ],
   },
   {
+    label: 'Hospital',
+    items: [
+      { path: '/hospital/doctors', label: 'Doctors', icon: <LocalHospitalIcon />, requiredPermission: 'hospital.doctor.manage', requiredModule: 'hospital' },
+      { path: '/hospital/patients', label: 'Patients', icon: <BadgeIcon />, requiredPermission: 'hospital.patient.manage', requiredModule: 'hospital' },
+      { path: '/hospital/appointments', label: 'Appointments', icon: <EventAvailableIcon />, requiredPermission: 'hospital.appointment.manage', requiredModule: 'hospital' },
+      { path: '/hospital/queue', label: 'Token Queue', icon: <ConfirmationNumberIcon />, requiredModule: 'hospital' },
+      { path: '/hospital/reports', label: 'Doctor Reports', icon: <SummarizeIcon />, requiredPermission: 'hospital.report.view', requiredModule: 'hospital' },
+    ],
+  },
+  {
     label: 'System',
     items: [{ path: '/settings', label: 'Settings', icon: <SettingsIcon /> }],
   },
@@ -83,11 +100,16 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { status } = useLicense();
+  const { isModuleEnabled } = useModules();
 
   const permissions = user?.permissions ?? [];
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => !item.requiredPermission || permissions.includes(item.requiredPermission)),
+    items: group.items.filter(
+      (item) =>
+        (!item.requiredPermission || permissions.includes(item.requiredPermission)) &&
+        (!item.requiredModule || isModuleEnabled(item.requiredModule)),
+    ),
   })).filter((group) => group.items.length > 0);
 
   return (

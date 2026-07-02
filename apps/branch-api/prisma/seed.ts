@@ -26,6 +26,11 @@ const PERMISSION_CATALOG: Array<{ code: string; module: string; description: str
   { code: 'user.manage', module: 'user', description: 'Manage users and roles' },
   { code: 'plugin.manage', module: 'plugin', description: 'Install/activate/deactivate plugins' },
   { code: 'pos.sale.viewAll', module: 'pos', description: 'View every sale in the branch, not just sales the user created' },
+  { code: 'hospital.doctor.manage', module: 'hospital', description: 'Create, edit, and manage doctor profiles and schedules' },
+  { code: 'hospital.patient.manage', module: 'hospital', description: 'Create and edit patient records' },
+  { code: 'hospital.appointment.manage', module: 'hospital', description: 'Create, update, and transition appointments and issue tokens' },
+  { code: 'hospital.appointment.viewAll', module: 'hospital', description: "View every doctor's appointments and queue, not just the linked doctor's own" },
+  { code: 'hospital.report.view', module: 'hospital', description: 'View hospital/doctor reports' },
 ];
 
 // Tenant-scoped system roles seeded for every company. Cashier/Inventory Manager/
@@ -43,6 +48,21 @@ const SYSTEM_ROLE_PERMISSIONS: Record<string, string[] | 'ALL'> = {
     'supplier.write',
   ],
   Accountant: ['report.financial.view', 'accounting.write', 'customer.write', 'supplier.write'],
+  // Hospital-module roles, seeded unconditionally for every tenant like the four roles
+  // above — harmless when the Hospital module is disabled (ModuleGuard blocks every
+  // hospital.* endpoint regardless of role permissions), and means enabling the module
+  // later for an existing tenant needs zero role-backfill migration.
+  Receptionist: ['hospital.patient.manage', 'hospital.appointment.manage'],
+  // Scoped to their own queue via Doctor.linkedUserId, NOT hospital.appointment.viewAll —
+  // see HospitalScopeService.
+  Doctor: ['hospital.appointment.manage'],
+  'Hospital Manager': [
+    'hospital.doctor.manage',
+    'hospital.patient.manage',
+    'hospital.appointment.manage',
+    'hospital.appointment.viewAll',
+    'hospital.report.view',
+  ],
 };
 
 async function main(): Promise<void> {
@@ -163,6 +183,19 @@ async function main(): Promise<void> {
       planId: enterprisePlan.id,
       startDate: new Date(),
       expiryDate: oneYearOut,
+    },
+  });
+
+  // Module catalog rows are platform-wide, not per-tenant — seeded once here, never
+  // re-created by companies.service.ts's create() (new companies start with zero
+  // TenantModule grants; every module is opt-in, enabled later by the Super Admin).
+  await prisma.moduleCatalog.upsert({
+    where: { code: 'hospital' },
+    update: {},
+    create: {
+      code: 'hospital',
+      name: 'Hospital / Doctor Management',
+      description: 'Doctors, patients, appointments, daily token queues, and doctor-wise reporting.',
     },
   });
 

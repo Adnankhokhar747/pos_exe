@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Chip, MenuItem, Snackbar, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch, ApiError } from '../api/client';
 import type { CompanySummary, Plan } from '../api/types';
 import { DataTable } from '../components/DataTable';
@@ -32,6 +33,7 @@ function licenseChipColor(subscriptionStatus: string, blocked: boolean): 'succes
 
 export function CompaniesPage(): JSX.Element {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   const companiesQuery = useQuery({
@@ -204,6 +206,9 @@ export function CompaniesPage(): JSX.Element {
                   }}
                 >
                   Change Plan
+                </SecondaryButton>
+                <SecondaryButton size="small" onClick={() => navigate(`/modules?companyId=${c.id}`)}>
+                  Modules
                 </SecondaryButton>
                 <SecondaryButton size="small" color="error" onClick={() => setDeleteTarget(c)}>
                   Delete

@@ -63,3 +63,27 @@ export interface PlatformAlerts {
   nearInvoiceLimit: AlertEntry[];
   nearUserLimit: AlertEntry[];
 }
+
+export interface ModuleCatalogEntry {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ModuleStatus {
+  moduleCode: string;
+  name: string;
+  enabled: boolean;
+  blocked: boolean;
+  daysUntilExpiry: number | null;
+  inGracePeriod: boolean;
+  expiryDate: string | null;
+  limits: Record<string, number | null> | null;
+}
+
+export interface TenantModuleGrant extends ModuleStatus {
+  moduleId: string;
+}

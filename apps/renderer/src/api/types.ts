@@ -31,6 +31,17 @@ export interface LoginResponse {
   user: AuthenticatedUser;
 }
 
+export interface ModuleStatus {
+  moduleCode: string;
+  name: string;
+  enabled: boolean;
+  blocked: boolean;
+  daysUntilExpiry: number | null;
+  inGracePeriod: boolean;
+  expiryDate: string | null;
+  limits: Record<string, number | null> | null;
+}
+
 export interface Permission {
   id: string;
   code: string;
@@ -447,4 +458,91 @@ export interface ReceiptSettings {
   headerText: string | null;
   footerText: string | null;
   paperWidthMm: number;
+}
+
+export type DayOfWeek = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface Doctor {
+  id: string;
+  linkedUserId: string | null;
+  linkedUser: { id: string; fullName: string; username: string } | null;
+  name: string;
+  specialization: string | null;
+  phone: string | null;
+  email: string | null;
+  roomNumber: string | null;
+  consultationFee: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DoctorSchedule {
+  id: string;
+  doctorId: string;
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+}
+
+export interface LinkableUser {
+  id: string;
+  fullName: string;
+  username: string;
+}
+
+export interface Patient {
+  id: string;
+  name: string;
+  phone: string | null;
+  gender: string | null;
+  dateOfBirth: string | null;
+  address: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AppointmentType = 'walk_in' | 'advance';
+export type AppointmentStatus = 'booked' | 'confirmed' | 'completed' | 'cancelled' | 'no_show';
+
+export interface Appointment {
+  id: string;
+  doctorId: string;
+  patientId: string;
+  appointmentType: AppointmentType;
+  status: AppointmentStatus;
+  appointmentDate: string;
+  tokenNumber: number;
+  bookedAt: string;
+  arrivedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  notes: string | null;
+  doctor: Doctor;
+  patient: Patient;
+}
+
+export interface QueueStatus {
+  currentToken: number;
+  nextToken: number | null;
+  waitingCount: number;
+  completedCount: number;
+}
+
+export interface DoctorPatientCount {
+  doctorId: string;
+  doctorName: string;
+  patientCount: number;
+}
+
+export interface DoctorAppointmentSummary {
+  doctorId: string;
+  doctorName: string;
+  walkInCount: number;
+  advanceBookingCount: number;
+  completedCount: number;
+  cancelledCount: number;
+  noShowCount: number;
 }

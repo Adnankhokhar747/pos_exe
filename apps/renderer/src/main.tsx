@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App';
 import { AuthProvider } from './state/auth-context';
 import { LicenseProvider } from './state/license-context';
+import { ModulesProvider } from './state/modules-context';
 import { createAppTheme } from './theme/theme';
 import './styles.css';
 
@@ -19,9 +20,11 @@ function Root(): JSX.Element {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <LicenseProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
+            <ModulesProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </ModulesProvider>
           </LicenseProvider>
         </AuthProvider>
       </QueryClientProvider>

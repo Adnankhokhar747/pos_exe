@@ -16,6 +16,8 @@ import { LicensingModule } from './modules/licensing/licensing.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { UsersModule } from './modules/users/users.module';
 import { BranchesModule } from './modules/branches/branches.module';
+import { ModuleEntitlementsModule } from './modules/module-entitlements/module-entitlements.module';
+import { HospitalModule } from './modules/hospital/hospital.module';
 import { HealthController } from './modules/health/health.controller';
 import { DomainExceptionFilter } from './common/filters/domain-exception.filter';
 
@@ -37,6 +39,8 @@ import { DomainExceptionFilter } from './common/filters/domain-exception.filter'
     PlatformModule,
     UsersModule,
     BranchesModule,
+    ModuleEntitlementsModule,
+    HospitalModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_FILTER, useClass: DomainExceptionFilter }],

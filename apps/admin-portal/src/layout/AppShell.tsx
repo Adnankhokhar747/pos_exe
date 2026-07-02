@@ -13,6 +13,7 @@ import {
 import BusinessIcon from '@mui/icons-material/Business';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import ExtensionIcon from '@mui/icons-material/Extension';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth-context';
 import { SecondaryButton } from '../components/buttons';
@@ -20,6 +21,7 @@ import { SecondaryButton } from '../components/buttons';
 const NAV_ITEMS = [
   { path: '/companies', label: 'Companies', icon: <BusinessIcon /> },
   { path: '/plans', label: 'Plans', icon: <WorkspacePremiumIcon /> },
+  { path: '/modules', label: 'Modules', icon: <ExtensionIcon /> },
   { path: '/alerts', label: 'Alerts', icon: <NotificationsActiveIcon /> },
 ];
 

@@ -35,6 +35,10 @@ model Tenant {
   users        User[]
   roles        Role[]
   subscription TenantSubscription?
+  tenantModules TenantModule[]
+  doctors      Doctor[]
+  patients     Patient[]
+  appointments Appointment[]
 
   @@map("tenants")
 }
@@ -73,8 +77,9 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  tenant    Tenant     @relation(fields: [tenantId], references: [id])
-  userRoles UserRole[]
+  tenant        Tenant     @relation(fields: [tenantId], references: [id])
+  userRoles     UserRole[]
+  doctorProfile Doctor?
 
   @@unique([tenantId, username])
   @@map("users")
@@ -1002,4 +1007,162 @@ model PlatformAdmin {
   createdAt    DateTime @default(now()) @map("created_at")
 
   @@map("platform_admins")
+}
+
+// ---------- Module Entitlements (SaaS plugin/addon system) ----------
+//
+// Generic, reusable layer so verticals beyond Hospital (School, Restaurant, Pharmacy,
+// Laboratory, Accounting, HR, Manufacturing) can be added later as additional
+// ModuleCatalog rows + a consuming Nest module, without touching this layer again.
+// Named ModuleCatalog (not bare `Module`) to avoid clashing with Nest's own
+// `@Module()` decorator used throughout this codebase.
+
+model ModuleCatalog {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenantModules TenantModule[]
+
+  @@map("module_catalog")
+}
+
+model TenantModule {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  moduleId        String    @map("module_id")
+  enabled         Boolean   @default(false)
+  startDate       DateTime? @map("start_date")
+  expiryDate      DateTime? @map("expiry_date")
+  gracePeriodDays Int       @default(7) @map("grace_period_days")
+  // Flexible per-module limit bag (e.g. Hospital: {"doctorLimit":5,"tokenLimitPerDay":100,
+  // "appointmentLimit":500}). Kept as JSON rather than fixed columns because every module
+  // defines its own limit keys — a migration per module for limit columns would defeat the
+  // point of a generic layer.
+  limits          Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id])
+  module ModuleCatalog @relation(fields: [moduleId], references: [id])
+
+  @@unique([tenantId, moduleId])
+  @@map("tenant_modules")
+}
+
+// ---------- Hospital Module (first plugin built on Module Entitlements) ----------
+//
+// Tenant-scoped, not branch-scoped: the spec's limits ("Token Limit ... company-wide
+// across all doctors") are explicitly tenant-wide, and this product's hospital tenants
+// are single-location in practice. Nullable branchId can be added later without a
+// breaking migration if a multi-branch hospital tenant ever needs it.
+
+enum AppointmentType {
+  walk_in
+  advance
+}
+
+enum AppointmentStatus {
+  booked
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+enum DayOfWeek {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  sunday
+}
+
+model Doctor {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  linkedUserId    String?  @unique @map("linked_user_id")
+  name            String
+  specialization  String?
+  phone           String?
+  email           String?
+  roomNumber      String?  @map("room_number")
+  consultationFee Decimal  @default(0) @map("consultation_fee") @db.Decimal(14, 4)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  linkedUser   User?            @relation(fields: [linkedUserId], references: [id])
+  schedules    DoctorSchedule[]
+  appointments Appointment[]
+
+  @@index([tenantId])
+  @@map("doctors")
+}
+
+model DoctorSchedule {
+  id        String    @id @default(uuid())
+  doctorId  String    @map("doctor_id")
+  dayOfWeek DayOfWeek @map("day_of_week")
+  startTime String    @map("start_time")
+  endTime   String    @map("end_time")
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  @@unique([doctorId, dayOfWeek, startTime])
+  @@map("doctor_schedules")
+}
+
+model Patient {
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  name        String
+  phone       String?
+  gender      String?
+  dateOfBirth DateTime? @map("date_of_birth") @db.Date
+  address     String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  appointments Appointment[]
+
+  @@index([tenantId])
+  @@map("patients")
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  tenantId        String            @map("tenant_id")
+  doctorId        String            @map("doctor_id")
+  patientId       String            @map("patient_id")
+  appointmentType AppointmentType   @map("appointment_type")
+  status          AppointmentStatus @default(booked)
+  appointmentDate DateTime          @map("appointment_date") @db.Date
+  tokenNumber     Int               @map("token_number")
+  bookedAt        DateTime          @default(now()) @map("booked_at")
+  arrivedAt       DateTime?         @map("arrived_at")
+  completedAt     DateTime?         @map("completed_at")
+  cancelledAt     DateTime?         @map("cancelled_at")
+  cancelReason    String?           @map("cancel_reason")
+  notes           String?
+  createdBy       String?           @map("created_by")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@unique([doctorId, appointmentDate, tokenNumber])
+  @@index([tenantId, appointmentDate])
+  @@index([doctorId, appointmentDate, status])
+  @@map("appointments")
 }

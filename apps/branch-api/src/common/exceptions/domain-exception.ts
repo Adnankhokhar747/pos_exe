@@ -101,3 +101,30 @@ export class LimitExceededError extends DomainException {
     super(message);
   }
 }
+
+export class ModuleBlockedError extends DomainException {
+  readonly code = 'module_blocked';
+  readonly httpStatus = 403;
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class InvalidAppointmentStatusTransitionError extends DomainException {
+  readonly code = 'invalid_appointment_status_transition';
+  readonly httpStatus = 422;
+
+  constructor(from: string, to: string) {
+    super(`Cannot transition appointment from "${from}" to "${to}".`);
+  }
+}
+
+export class TokenIssuanceConflictError extends DomainException {
+  readonly code = 'token_issuance_conflict';
+  readonly httpStatus = 409;
+
+  constructor() {
+    super('Too many tokens are being issued for this doctor at once. Please try again.');
+  }
+}

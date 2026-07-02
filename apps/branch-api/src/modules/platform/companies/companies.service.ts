@@ -21,6 +21,15 @@ const SYSTEM_ROLE_PERMISSIONS: Record<string, string[] | 'ALL'> = {
     'supplier.write',
   ],
   Accountant: ['report.financial.view', 'accounting.write', 'customer.write', 'supplier.write'],
+  Receptionist: ['hospital.patient.manage', 'hospital.appointment.manage'],
+  Doctor: ['hospital.appointment.manage'],
+  'Hospital Manager': [
+    'hospital.doctor.manage',
+    'hospital.patient.manage',
+    'hospital.appointment.manage',
+    'hospital.appointment.viewAll',
+    'hospital.report.view',
+  ],
 };
 
 export interface CompanySummary {
