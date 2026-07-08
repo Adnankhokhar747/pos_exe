@@ -31,4 +31,9 @@ export class ModulesCatalogService {
       data: { name: dto.name, description: dto.description, isActive: dto.isActive },
     });
   }
+
+  async deactivate(id: string): Promise<ModuleCatalog> {
+    await this.findOne(id);
+    return this.prisma.moduleCatalog.update({ where: { id }, data: { isActive: false } });
+  }
 }

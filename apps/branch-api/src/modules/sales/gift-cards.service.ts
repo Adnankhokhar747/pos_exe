@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { GiftCard, Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { IssueGiftCardDto } from './dto/issue-gift-card.dto';
+import { UpdateGiftCardDto } from './dto/update-gift-card.dto';
 import { InvalidGiftCardError } from '../../common/exceptions/domain-exception';
 
 type Tx = Prisma.TransactionClient | PrismaClient;
@@ -13,6 +14,24 @@ export class GiftCardsService {
 
   list(tenantId: string): Promise<GiftCard[]> {
     return this.prisma.giftCard.findMany({ where: { tenantId }, orderBy: { issuedAt: 'desc' } });
+  }
+
+  findOne(tenantId: string, id: string): Promise<GiftCard | null> {
+    return this.prisma.giftCard.findFirst({ where: { id, tenantId } });
+  }
+
+  update(tenantId: string, id: string, dto: UpdateGiftCardDto): Promise<GiftCard> {
+    return this.prisma.giftCard.update({
+      where: { id },
+      data: {
+        ...(dto.expiryDate !== undefined ? { expiryDate: new Date(dto.expiryDate) } : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+      },
+    });
+  }
+
+  deactivate(tenantId: string, id: string): Promise<GiftCard> {
+    return this.prisma.giftCard.update({ where: { id }, data: { isActive: false } });
   }
 
   async issue(tenantId: string, dto: IssueGiftCardDto): Promise<GiftCard> {

@@ -1,9 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+
 import { Appointment, AppointmentStatus } from '@prisma/client';
 import { AppointmentsService } from './appointments.service';
+import { AppointmentBillingService } from './appointment-billing.service';
 import { HospitalScopeService } from './hospital-scope.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
+import { FinalizeBillDto } from './dto/finalize-bill.dto';
+import { SaveDraftBillDto } from './dto/save-draft-bill.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
 import { LicenseGuard } from '../licensing/license.guard';
@@ -19,6 +23,7 @@ import { AuthenticatedUser } from '../../common/auth/types';
 export class AppointmentsController {
   constructor(
     private readonly appointmentsService: AppointmentsService,
+    private readonly billingService: AppointmentBillingService,
     private readonly hospitalScopeService: HospitalScopeService,
   ) {}
 
@@ -55,5 +60,41 @@ export class AppointmentsController {
   ): Promise<Appointment> {
     const scope = await this.hospitalScopeService.resolveDoctorScope(user);
     return this.appointmentsService.updateStatus(user.tenantId, id, scope, dto.status, dto.cancelReason);
+  }
+
+  @Put(':id/bill')
+  @RequirePermission('hospital.appointment.manage')
+  async saveDraftBill(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SaveDraftBillDto,
+  ) {
+    const scope = await this.hospitalScopeService.resolveDoctorScope(user);
+    return this.billingService.saveDraft(user.tenantId, id, user.userId, scope, dto);
+  }
+
+  @Post(':id/bill')
+  @RequirePermission('hospital.appointment.manage')
+  async finalizeBill(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: FinalizeBillDto,
+  ) {
+    const scope = await this.hospitalScopeService.resolveDoctorScope(user);
+    return this.billingService.finalizeBill(user.tenantId, id, user.userId, scope, dto);
+  }
+
+  @Get(':id/bill')
+  async getBill(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    const scope = await this.hospitalScopeService.resolveDoctorScope(user);
+    return this.billingService.getBill(user.tenantId, id, scope);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @RequirePermission('hospital.appointment.manage')
+  async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<void> {
+    const scope = await this.hospitalScopeService.resolveDoctorScope(user);
+    await this.appointmentsService.remove(user.tenantId, id, scope);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient, Supplier, SupplierLedgerEntryType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
@@ -30,12 +30,20 @@ export class SuppliersService {
     return this.prisma.supplier.findFirst({ where: { id, tenantId } });
   }
 
-  update(tenantId: string, id: string, dto: UpdateSupplierDto): Promise<Supplier> {
-    return this.prisma.supplier.update({ where: { id }, data: { ...dto } });
+  // Same tenant-scoping gap as products.service.ts: tenantId was accepted but never
+  // applied to the query, so this was only safe by virtue of the controller
+  // pre-checking ownership via findOne() first. updateMany() + a count check makes
+  // the service correct on its own.
+  async update(tenantId: string, id: string, dto: UpdateSupplierDto): Promise<Supplier> {
+    const { count } = await this.prisma.supplier.updateMany({ where: { id, tenantId }, data: { ...dto } });
+    if (count === 0) throw new NotFoundException(`Supplier ${id} not found.`);
+    return this.prisma.supplier.findUniqueOrThrow({ where: { id } });
   }
 
-  deactivate(tenantId: string, id: string): Promise<Supplier> {
-    return this.prisma.supplier.update({ where: { id }, data: { isActive: false } });
+  async deactivate(tenantId: string, id: string): Promise<Supplier> {
+    const { count } = await this.prisma.supplier.updateMany({ where: { id, tenantId }, data: { isActive: false } });
+    if (count === 0) throw new NotFoundException(`Supplier ${id} not found.`);
+    return this.prisma.supplier.findUniqueOrThrow({ where: { id } });
   }
 
   getLedger(supplierId: string) {

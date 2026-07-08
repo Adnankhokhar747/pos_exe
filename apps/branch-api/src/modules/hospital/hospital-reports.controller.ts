@@ -1,5 +1,10 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { DoctorAppointmentSummary, DoctorPatientCount, HospitalReportsService } from './hospital-reports.service';
+import {
+  DoctorAppointmentSummary,
+  DoctorPatientCount,
+  HospitalReportsService,
+  HospitalRevenueSummary,
+} from './hospital-reports.service';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
 import { LicenseGuard } from '../licensing/license.guard';
@@ -43,5 +48,14 @@ export class HospitalReportsController {
     @Query('doctorId') doctorId?: string,
   ): Promise<DoctorAppointmentSummary[]> {
     return this.hospitalReportsService.summary(user.tenantId, new Date(from), new Date(to), doctorId);
+  }
+
+  @Get('revenue')
+  revenue(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ): Promise<HospitalRevenueSummary> {
+    return this.hospitalReportsService.revenue(user.tenantId, new Date(from), new Date(to));
   }
 }

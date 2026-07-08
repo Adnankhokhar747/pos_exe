@@ -24,7 +24,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '../api/client';
-import type { CartLine, Currency, Customer, Invoice, InvoiceLine, ProductWithStock, ReceiptSettings, TenantSettings } from '../api/types';
+import type { CartLine, Currency, Customer, Invoice, InvoiceLine, Patient, ProductWithStock, ReceiptSettings, TenantSettings } from '../api/types';
 import { SearchInput } from '../components/SearchInput';
 import { AppModal } from '../components/AppModal';
 import { DataTable } from '../components/DataTable';
@@ -94,6 +94,9 @@ export function PosPage(): JSX.Element {
   const [quickAddName, setQuickAddName] = useState('');
   const [quickAddPhone, setQuickAddPhone] = useState('');
 
+  const [linkedPatient, setLinkedPatient] = useState<Patient | null>(null);
+  const [patientAdvanceAmount, setPatientAdvanceAmount] = useState('');
+
   const [heldOpen, setHeldOpen] = useState(false);
   const [recentOpen, setRecentOpen] = useState(false);
   const [voidTarget, setVoidTarget] = useState<Invoice | null>(null);
@@ -117,6 +120,12 @@ export function PosPage(): JSX.Element {
   const customersQuery = useQuery({
     queryKey: ['customers-lookup'],
     queryFn: () => apiFetch<Customer[]>('/api/v1/customers'),
+  });
+
+  const patientsQuery = useQuery({
+    queryKey: ['patients-pos-lookup'],
+    queryFn: () => apiFetch<Patient[]>('/api/v1/hospital/patients'),
+    retry: false,
   });
 
   const cashCustomer = useMemo(
@@ -228,6 +237,29 @@ export function PosPage(): JSX.Element {
     setLoyaltyPointsToRedeem('');
     setGiftCardCode('');
     setCurrencyCode(tenantSettingsQuery.data?.baseCurrency ?? '');
+    setLinkedPatient(null);
+    setPatientAdvanceAmount('');
+  }
+
+  function buildPosPayments(grandTotal: number) {
+    const advAmt = Math.min(Number(patientAdvanceAmount) || 0, grandTotal);
+    const remaining = grandTotal - advAmt;
+    const payments = [];
+    if (advAmt > 0 && linkedPatient) {
+      payments.push({ method: 'patient_advance', amount: money(advAmt) });
+    }
+    if (remaining > 0.005) {
+      payments.push({
+        method: paymentMethod,
+        amount: money(remaining),
+        receivedAmount: remaining > 0 && paymentMethod === 'cash' ? (receivedAmount || money(remaining)) : money(remaining),
+        reference: paymentMethod === 'gift_card' ? giftCardCode : undefined,
+      });
+    }
+    if (payments.length === 0) {
+      payments.push({ method: paymentMethod, amount: money(grandTotal), receivedAmount: receivedAmount || money(grandTotal) });
+    }
+    return payments;
   }
 
   const applyCouponMutation = useMutation({
@@ -253,6 +285,7 @@ export function PosPage(): JSX.Element {
           branchId: ACTIVE_BRANCH_ID,
           warehouseId: ACTIVE_WAREHOUSE_ID,
           customerId: customer?.id,
+          patientId: linkedPatient?.id,
           lines: cart.map((line) => ({
             productId: line.productId,
             quantity: String(line.quantity),
@@ -261,14 +294,7 @@ export function PosPage(): JSX.Element {
             serialNumbers: line.trackSerials ? line.serialNumbers ?? [] : undefined,
           })),
           invoiceDiscountValue: invoiceDiscount,
-          payments: [
-            {
-              method: paymentMethod,
-              amount: money(totals.grandTotal),
-              receivedAmount: receivedAmount || money(totals.grandTotal),
-              reference: paymentMethod === 'gift_card' ? giftCardCode : undefined,
-            },
-          ],
+          payments: buildPosPayments(totals.grandTotal),
           couponCode: appliedCoupon?.code,
           loyaltyPointsToRedeem: loyaltyPointsToRedeem || undefined,
           currencyCode: currencyCode || undefined,
@@ -510,20 +536,37 @@ export function PosPage(): JSX.Element {
           <Typography variant="h6" gutterBottom>
             Cart
           </Typography>
-          <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 1 }}>
+          {/* When hospital module is enabled, show patient selector only.
+              Walk-in customer is still auto-applied behind the scenes. */}
+          {patientsQuery.isSuccess ? (
             <Autocomplete
               size="small"
               fullWidth
-              options={customersQuery.data ?? []}
-              getOptionLabel={(option) => option.name}
-              value={customer}
-              onChange={(_, value) => setCustomer(value)}
-              renderInput={(params) => <TextField {...params} label="Customer (optional)" />}
+              options={patientsQuery.data ?? []}
+              getOptionLabel={(p) =>
+                `${p.name}${Number(p.currentBalance) > 0 ? ` (Advance: ${Number(p.currentBalance).toLocaleString()})` : ''}`
+              }
+              value={linkedPatient}
+              onChange={(_, value) => { setLinkedPatient(value); setPatientAdvanceAmount(''); }}
+              renderInput={(params) => <TextField {...params} label="Patient (deduct from advance)" />}
+              sx={{ mb: 1 }}
             />
-            <IconButton size="small" sx={{ mt: 0.5 }} title="Quick add customer" onClick={() => setQuickAddOpen(true)}>
-              <PersonAddAlt1Icon fontSize="small" />
-            </IconButton>
-          </Stack>
+          ) : (
+            <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 1 }}>
+              <Autocomplete
+                size="small"
+                fullWidth
+                options={customersQuery.data ?? []}
+                getOptionLabel={(option) => option.name}
+                value={customer}
+                onChange={(_, value) => setCustomer(value)}
+                renderInput={(params) => <TextField {...params} label="Customer (optional)" />}
+              />
+              <IconButton size="small" sx={{ mt: 0.5 }} title="Quick add customer" onClick={() => setQuickAddOpen(true)}>
+                <PersonAddAlt1Icon fontSize="small" />
+              </IconButton>
+            </Stack>
+          )}
           <Box flex={1} overflow="auto">
             {cart.length === 0 && (
               <Typography color="text.secondary" variant="body2">
@@ -764,10 +807,31 @@ export function PosPage(): JSX.Element {
         }
       >
         <Typography gutterBottom>Grand Total: ${money(totals.grandTotal)}</Typography>
+          {linkedPatient && Number(linkedPatient.currentBalance) > 0 && (
+            <Box sx={{ bgcolor: 'success.50', border: '1px solid', borderColor: 'success.200', borderRadius: 1, p: 1.5, mb: 1.5, mt: 1 }}>
+              <Typography variant="body2" color="success.main" gutterBottom>
+                <strong>Patient Advance Balance: {Number(linkedPatient.currentBalance).toLocaleString()}</strong>
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                label="Apply from patient advance"
+                type="number"
+                value={patientAdvanceAmount}
+                onChange={(e) => {
+                  const max = Math.min(Number(linkedPatient.currentBalance), totals.grandTotal);
+                  const v = Math.min(Number(e.target.value) || 0, max);
+                  setPatientAdvanceAmount(String(v));
+                }}
+                inputProps={{ min: 0, max: Math.min(Number(linkedPatient.currentBalance), totals.grandTotal) }}
+                helperText={`Remaining after advance: $${money(Math.max(0, totals.grandTotal - (Number(patientAdvanceAmount) || 0)))}`}
+              />
+            </Box>
+          )}
           <TextField
             select
             fullWidth
-            label="Method"
+            label="Payment Method"
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value as typeof paymentMethod)}
             sx={{ mt: 1 }}

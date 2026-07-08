@@ -176,6 +176,9 @@ export interface PurchaseOrder {
   supplierId: string;
   warehouseId: string;
   status: string;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
   createdAt: string;
   lines: PurchaseOrderLine[];
 }
@@ -195,6 +198,9 @@ export interface GoodsReceipt {
   warehouseId: string;
   purchaseOrderId: string | null;
   status: string;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
   receivedAt: string;
   lines: GoodsReceiptLine[];
 }
@@ -207,6 +213,9 @@ export interface SupplierInvoice {
   amountPaid: string;
   status: string;
   dueDate: string | null;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
   createdAt: string;
 }
 
@@ -215,6 +224,9 @@ export interface SupplierPayment {
   supplierId: string;
   amount: string;
   method: string;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
   paidAt: string;
 }
 
@@ -247,6 +259,9 @@ export interface Expense {
   note: string | null;
   paidVia: string | null;
   occurredAt: string;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
 }
 
 export interface IncomeEntry {
@@ -256,6 +271,9 @@ export interface IncomeEntry {
   amount: string;
   note: string | null;
   occurredAt: string;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
 }
 
 export interface DailyClosing {
@@ -265,6 +283,17 @@ export interface DailyClosing {
   expectedCash: string;
   countedCash: string;
   variance: string;
+  voidReason: string | null;
+  voidedBy: string | null;
+  voidedAt: string | null;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  code: string;
+  timezone: string;
+  isActive: boolean;
 }
 
 export interface ProfitSummary {
@@ -316,6 +345,7 @@ export interface Invoice {
   invoiceType: string;
   status: string;
   customerId: string | null;
+  patientId: string | null;
   customer?: Customer | null;
   subtotal: string;
   discountTotal: string;
@@ -498,9 +528,55 @@ export interface Patient {
   gender: string | null;
   dateOfBirth: string | null;
   address: string | null;
+  currentBalance: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PatientLedgerEntry {
+  id: string;
+  patientId: string;
+  appointmentId: string | null;
+  entryType: string;
+  amount: string;
+  balanceAfter: string;
+  description: string | null;
+  occurredAt: string;
+}
+
+export interface AppointmentBillLine {
+  id: string;
+  lineType: string;
+  productId: string | null;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  lineTotal: string;
+  product?: { id: string; name: string } | null;
+}
+
+export interface AppointmentBillPayment {
+  id: string;
+  method: string;
+  amount: string;
+  reference: string | null;
+}
+
+export interface AppointmentBill {
+  id: string;
+  appointmentId: string;
+  isDraft: boolean;
+  consultationFee: string;
+  medicineTotal: string;
+  totalDue: string;
+  advanceApplied: string;
+  totalCollected: string;
+  advanceCredited: string;
+  patientBalance: string;
+  finalizedAt: string | null;
+  lines?: AppointmentBillLine[];
+  payments?: AppointmentBillPayment[];
 }
 
 export type AppointmentType = 'walk_in' | 'advance';
@@ -522,6 +598,7 @@ export interface Appointment {
   notes: string | null;
   doctor: Doctor;
   patient: Patient;
+  bill?: { id: string; isDraft: boolean; totalDue: string; totalCollected: string; advanceApplied: string; advanceCredited: string; patientBalance: string; finalizedAt: string | null } | null;
 }
 
 export interface QueueStatus {
@@ -545,4 +622,20 @@ export interface DoctorAppointmentSummary {
   completedCount: number;
   cancelledCount: number;
   noShowCount: number;
+}
+
+export interface DoctorRevenueSummary {
+  doctorId: string;
+  doctorName: string;
+  consultationRevenue: string;
+  appointmentCount: number;
+}
+
+export interface HospitalRevenueSummary {
+  totalConsultationRevenue: string;
+  totalMedicineRevenue: string;
+  totalRevenue: string;
+  totalAdvanceCollected: string;
+  totalRefunded: string;
+  byDoctor: DoctorRevenueSummary[];
 }

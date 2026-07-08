@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { BundleComponent, Prisma, Product } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -43,9 +43,14 @@ export class ProductsService {
     return this.prisma.product.findFirst({ where: { id, tenantId, deletedAt: null } });
   }
 
-  update(tenantId: string, id: string, dto: UpdateProductDto): Promise<Product> {
-    return this.prisma.product.update({
-      where: { id },
+  // update()/softDelete() accepted a tenantId parameter but never actually applied it to
+  // the query — id alone was the where clause, so this method was unsafe to call on its
+  // own (only safe because the controller happens to pre-check ownership via findOne()
+  // first). Verifying tenant ownership here too means the service is correct standalone,
+  // not just correct-by-caller-convention.
+  async update(tenantId: string, id: string, dto: UpdateProductDto): Promise<Product> {
+    const { count } = await this.prisma.product.updateMany({
+      where: { id, tenantId },
       data: {
         sku: dto.sku,
         barcode: dto.barcode,
@@ -60,10 +65,14 @@ export class ProductsService {
         trackSerials: dto.trackSerials,
       },
     });
+    if (count === 0) throw new NotFoundException(`Product ${id} not found.`);
+    return this.prisma.product.findUniqueOrThrow({ where: { id } });
   }
 
-  softDelete(tenantId: string, id: string): Promise<Product> {
-    return this.prisma.product.update({ where: { id }, data: { deletedAt: new Date() } });
+  async softDelete(tenantId: string, id: string): Promise<Product> {
+    const { count } = await this.prisma.product.updateMany({ where: { id, tenantId }, data: { deletedAt: new Date() } });
+    if (count === 0) throw new NotFoundException(`Product ${id} not found.`);
+    return this.prisma.product.findUniqueOrThrow({ where: { id } });
   }
 
   listVariants(tenantId: string, parentProductId: string): Promise<Product[]> {

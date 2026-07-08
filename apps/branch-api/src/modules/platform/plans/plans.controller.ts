@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { Plan } from '@prisma/client';
 import { PlansService } from './plans.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
@@ -15,6 +15,11 @@ export class PlansController {
     return this.plansService.list();
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string): Promise<Plan> {
+    return this.plansService.findOne(id);
+  }
+
   @Post()
   create(@Body() dto: CreatePlanDto): Promise<Plan> {
     return this.plansService.create(dto);
@@ -23,5 +28,10 @@ export class PlansController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdatePlanDto): Promise<Plan> {
     return this.plansService.update(id, dto);
+  }
+
+  @Delete(':id')
+  deactivate(@Param('id') id: string): Promise<Plan> {
+    return this.plansService.deactivate(id);
   }
 }

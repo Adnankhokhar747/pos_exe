@@ -1,7 +1,11 @@
 import 'reflect-metadata';
+import path from 'path';
+import { PrismaClient } from '@prisma/client';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { applyPendingMigrations } from './bootstrap/migrate';
+import { seedDefaults } from './bootstrap/seed-defaults';
 
 // Binds to 127.0.0.1 by default — never 0.0.0.0 — per docs/11-security-design.md §4:
 // for the single-device desktop deployment the Branch API must not be reachable from
@@ -9,6 +13,22 @@ import { AppModule } from './app.module';
 // BRANCH_API_HOST (e.g. "0.0.0.0") to serve more than one device/company; that is an
 // ops/deployment decision, not a code default, so it stays loopback-only here.
 async function bootstrap(): Promise<void> {
+  // Only the packaged desktop build sets this (see apps/desktop/main/branch-api-process.ts):
+  // its embedded Postgres starts genuinely empty on a fresh install, and there's no
+  // separate install step to run `prisma migrate deploy`/`pnpm seed` by hand. A normal
+  // dev/`nest start --watch` run manages its own DB via those commands directly, so it
+  // never sets this and this block is a no-op.
+  if (process.env.BRANCH_API_AUTO_MIGRATE === '1') {
+    const databaseUrl = process.env.DATABASE_URL!;
+    await applyPendingMigrations(databaseUrl, path.join(__dirname, 'prisma', 'migrations'));
+    const prisma = new PrismaClient();
+    try {
+      await seedDefaults(prisma);
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   // The renderer calls this API cross-origin: Vite dev server (http://localhost:5173)

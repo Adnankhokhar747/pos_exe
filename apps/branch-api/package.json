@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nest build",
+    "package:bundle": "npm run build && ts-node scripts/build-bundle.ts",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",
@@ -26,6 +27,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "embedded-postgres": "18.4.0-beta.17",
+    "pg": "^8.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "uuid": "^10.0.0"
@@ -37,6 +39,7 @@
     "@types/jest": "^29.5.13",
     "@types/node": "^20.16.0",
     "@types/uuid": "^10.0.0",
+    "esbuild": "^0.21.5",
     "jest": "^29.7.0",
     "prisma": "^5.20.0",
     "supertest": "^7.0.0",

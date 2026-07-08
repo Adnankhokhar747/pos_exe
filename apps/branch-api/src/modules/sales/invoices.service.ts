@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Coupon, Invoice, PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateInvoiceDto, InvoiceLineDto } from './dto/create-invoice.dto';
@@ -6,8 +6,10 @@ import { HoldInvoiceDto } from './dto/hold-invoice.dto';
 import { CreateReturnDto } from './dto/create-return.dto';
 import {
   InsufficientBatchStockError,
+  InsufficientPatientBalanceError,
   InsufficientStockError,
   InvalidGiftCardError,
+  InvalidPatientAdvancePaymentError,
   InvoiceAlreadyVoidedError,
   PaymentMismatchError,
   SerialNumberUnavailableError,
@@ -175,6 +177,7 @@ export class InvoicesService {
           invoiceType: 'sale',
           status: 'completed',
           customerId: dto.customerId,
+          patientId: dto.patientId,
           subtotal,
           discountTotal,
           taxTotal,
@@ -209,7 +212,7 @@ export class InvoicesService {
           },
         },
         include: { lines: true },
-      });
+      }) as Invoice & { lines: { id: string; productId: string }[] };
 
       for (let i = 0; i < computedLines.length; i++) {
         const { line, product, quantity } = computedLines[i]!;
@@ -239,6 +242,32 @@ export class InvoicesService {
         if (payment.method === 'gift_card') {
           if (!payment.reference) throw new InvalidGiftCardError('(none)', 'missing gift card code');
           await this.giftCardsService.redeem(tx, tenantId, payment.reference, new Prisma.Decimal(payment.amount));
+        }
+        if (payment.method === 'patient_advance') {
+          if (!dto.patientId) {
+            throw new InvalidPatientAdvancePaymentError('A patient must be selected before using patient advance.');
+          }
+          const patient = await tx.patient.findFirst({ where: { id: dto.patientId, tenantId } });
+          if (!patient) {
+            throw new InvalidPatientAdvancePaymentError('Selected patient was not found for this tenant.');
+          }
+          const deduct = new Prisma.Decimal(payment.amount);
+          if (patient.currentBalance.lessThan(deduct)) {
+            throw new InsufficientPatientBalanceError(patient.currentBalance.toString(), deduct.toString());
+          }
+          const newBalance = new Prisma.Decimal(patient.currentBalance).sub(deduct);
+          await tx.patient.update({ where: { id: dto.patientId }, data: { currentBalance: newBalance } });
+          await tx.patientLedgerEntry.create({
+            data: {
+              tenantId,
+              patientId: dto.patientId,
+              entryType: 'pos_sale',
+              amount: deduct.neg(),
+              balanceAfter: newBalance,
+              description: `POS sale — Invoice #${invoice.invoiceNo}`,
+              createdBy: cashierId,
+            },
+          });
         }
       }
 
@@ -370,21 +399,28 @@ export class InvoicesService {
   // continue editing; the held row is then discarded — completion always
   // goes through createInvoice() so stock/payment logic has exactly one
   // implementation (docs/00-functional-specification.md §8.2).
-  async resumeInvoice(id: string) {
+  // Both resumeInvoice and voidInvoice previously fetched by raw id with no
+  // tenant check at all (neither here nor in the controller) — any
+  // authenticated user holding the relevant permission could resume-delete or
+  // void an invoice belonging to a completely different company just by
+  // knowing/guessing its UUID. Scoping through the branch relation closes that.
+  async resumeInvoice(tenantId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
-      const invoice = await tx.invoice.findUniqueOrThrow({
-        where: { id },
+      const invoice = await tx.invoice.findFirst({
+        where: { id, branch: { tenantId } },
         include: { lines: { include: { product: true } } },
       });
+      if (!invoice) throw new NotFoundException(`Invoice ${id} not found.`);
       await tx.invoiceLine.deleteMany({ where: { invoiceId: id } });
       await tx.invoice.delete({ where: { id } });
       return invoice;
     });
   }
 
-  async voidInvoice(id: string, voidedBy: string, reason: string): Promise<Invoice> {
+  async voidInvoice(tenantId: string, id: string, voidedBy: string, reason: string): Promise<Invoice> {
     return this.prisma.$transaction(async (tx) => {
-      const invoice = await tx.invoice.findUniqueOrThrow({ where: { id }, include: { lines: true } });
+      const invoice = await tx.invoice.findFirst({ where: { id, branch: { tenantId } }, include: { lines: true, payments: true } });
+      if (!invoice) throw new NotFoundException(`Invoice ${id} not found.`);
       if (invoice.status === 'voided') {
         throw new InvoiceAlreadyVoidedError(id);
       }
@@ -446,6 +482,26 @@ export class InvoicesService {
             id,
           );
         }
+      }
+
+      const patientAdvanceRefund = invoice.payments
+        .filter((payment) => payment.method === 'patient_advance')
+        .reduce((sum, payment) => sum.add(payment.amount), ZERO);
+      if (invoice.patientId && patientAdvanceRefund.greaterThan(0)) {
+        const patient = await tx.patient.findUniqueOrThrow({ where: { id: invoice.patientId } });
+        const newBalance = patient.currentBalance.add(patientAdvanceRefund);
+        await tx.patient.update({ where: { id: invoice.patientId }, data: { currentBalance: newBalance } });
+        await tx.patientLedgerEntry.create({
+          data: {
+            tenantId: patient.tenantId,
+            patientId: invoice.patientId,
+            entryType: 'pos_void',
+            amount: patientAdvanceRefund,
+            balanceAfter: newBalance,
+            description: `POS void refund — Invoice #${invoice.invoiceNo}`,
+            createdBy: voidedBy,
+          },
+        });
       }
 
       return tx.invoice.update({

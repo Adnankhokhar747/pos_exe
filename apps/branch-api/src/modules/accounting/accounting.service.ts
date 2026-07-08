@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDailyClosingDto, CreateExpenseCategoryDto, CreateExpenseDto, CreateIncomeDto } from './dto/create-expense.dto';
+import { UpdateDailyClosingDto, UpdateExpenseDto, UpdateIncomeDto } from './dto/update-expense.dto';
+import { RecordAlreadyVoidedError } from '../../common/exceptions/domain-exception';
 
 const ZERO = new Prisma.Decimal(0);
 
@@ -47,6 +49,35 @@ export class AccountingService {
     });
   }
 
+  async findExpense(id: string) {
+    const expense = await this.prisma.expense.findUnique({ where: { id }, include: { category: true } });
+    if (!expense) throw new NotFoundException(`Expense ${id} not found.`);
+    return expense;
+  }
+
+  async updateExpense(id: string, dto: UpdateExpenseDto) {
+    const expense = await this.findExpense(id);
+    if (expense.voidedAt) throw new RecordAlreadyVoidedError('expense');
+    return this.prisma.expense.update({
+      where: { id },
+      data: {
+        ...(dto.categoryId !== undefined ? { categoryId: dto.categoryId } : {}),
+        ...(dto.amount !== undefined ? { amount: new Prisma.Decimal(dto.amount) } : {}),
+        ...(dto.note !== undefined ? { note: dto.note } : {}),
+        ...(dto.paidVia !== undefined ? { paidVia: dto.paidVia } : {}),
+      },
+    });
+  }
+
+  async voidExpense(id: string, voidedBy: string, reason: string) {
+    const expense = await this.findExpense(id);
+    if (expense.voidedAt) throw new RecordAlreadyVoidedError('expense');
+    return this.prisma.expense.update({
+      where: { id },
+      data: { voidedAt: new Date(), voidedBy, voidReason: reason },
+    });
+  }
+
   createIncome(dto: CreateIncomeDto) {
     return this.prisma.incomeEntry.create({
       data: { branchId: dto.branchId, category: dto.category, amount: new Prisma.Decimal(dto.amount), note: dto.note },
@@ -55,6 +86,34 @@ export class AccountingService {
 
   listIncome(branchId: string) {
     return this.prisma.incomeEntry.findMany({ where: { branchId }, orderBy: { occurredAt: 'desc' }, take: 200 });
+  }
+
+  async findIncome(id: string) {
+    const income = await this.prisma.incomeEntry.findUnique({ where: { id } });
+    if (!income) throw new NotFoundException(`Income entry ${id} not found.`);
+    return income;
+  }
+
+  async updateIncome(id: string, dto: UpdateIncomeDto) {
+    const income = await this.findIncome(id);
+    if (income.voidedAt) throw new RecordAlreadyVoidedError('income entry');
+    return this.prisma.incomeEntry.update({
+      where: { id },
+      data: {
+        ...(dto.category !== undefined ? { category: dto.category } : {}),
+        ...(dto.amount !== undefined ? { amount: new Prisma.Decimal(dto.amount) } : {}),
+        ...(dto.note !== undefined ? { note: dto.note } : {}),
+      },
+    });
+  }
+
+  async voidIncome(id: string, voidedBy: string, reason: string) {
+    const income = await this.findIncome(id);
+    if (income.voidedAt) throw new RecordAlreadyVoidedError('income entry');
+    return this.prisma.incomeEntry.update({
+      where: { id },
+      data: { voidedAt: new Date(), voidedBy, voidReason: reason },
+    });
   }
 
   async createDailyClosing(closedBy: string, dto: CreateDailyClosingDto) {
@@ -87,6 +146,31 @@ export class AccountingService {
     return this.prisma.dailyClosing.findMany({ where: { branchId }, orderBy: { businessDate: 'desc' }, take: 90 });
   }
 
+  async findDailyClosing(id: string) {
+    const closing = await this.prisma.dailyClosing.findUnique({ where: { id } });
+    if (!closing) throw new NotFoundException(`Daily closing ${id} not found.`);
+    return closing;
+  }
+
+  async updateDailyClosing(id: string, dto: UpdateDailyClosingDto) {
+    const closing = await this.findDailyClosing(id);
+    if (closing.voidedAt) throw new RecordAlreadyVoidedError('daily closing');
+    const countedCash = new Prisma.Decimal(dto.countedCash);
+    return this.prisma.dailyClosing.update({
+      where: { id },
+      data: { countedCash, variance: countedCash.sub(closing.expectedCash) },
+    });
+  }
+
+  async voidDailyClosing(id: string, voidedBy: string, reason: string) {
+    const closing = await this.findDailyClosing(id);
+    if (closing.voidedAt) throw new RecordAlreadyVoidedError('daily closing');
+    return this.prisma.dailyClosing.update({
+      where: { id },
+      data: { voidedAt: new Date(), voidedBy, voidReason: reason },
+    });
+  }
+
   async getProfitSummary(branchId: string, from: Date, to: Date): Promise<ProfitSummary> {
     const invoices = await this.prisma.invoice.findMany({
       where: { branchId, status: 'completed', createdAt: { gte: from, lte: to } },
@@ -104,11 +188,11 @@ export class AccountingService {
     const cogs = saleMovements.reduce((sum, movement) => sum.add(movement.quantityDelta.neg().mul(movement.unitCostAtMove)), ZERO);
 
     const expenseAgg = await this.prisma.expense.aggregate({
-      where: { branchId, occurredAt: { gte: from, lte: to } },
+      where: { branchId, occurredAt: { gte: from, lte: to }, voidedAt: null },
       _sum: { amount: true },
     });
     const incomeAgg = await this.prisma.incomeEntry.aggregate({
-      where: { branchId, occurredAt: { gte: from, lte: to } },
+      where: { branchId, occurredAt: { gte: from, lte: to }, voidedAt: null },
       _sum: { amount: true },
     });
 

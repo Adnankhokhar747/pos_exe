@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, SupplierInvoice } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
 import { CreateSupplierInvoiceDto } from './dto/create-supplier-invoice.dto';
+import { UpdateSupplierInvoiceDto } from './dto/update-supplier-invoice.dto';
+import { RecordAlreadyVoidedError, SupplierInvoiceNotVoidableError } from '../../common/exceptions/domain-exception';
 
 @Injectable()
 export class SupplierInvoicesService {
@@ -10,6 +12,47 @@ export class SupplierInvoicesService {
     private readonly prisma: PrismaService,
     private readonly suppliersService: SuppliersService,
   ) {}
+
+  async findOne(id: string) {
+    const invoice = await this.prisma.supplierInvoice.findUnique({ where: { id } });
+    if (!invoice) throw new NotFoundException(`Supplier invoice ${id} not found.`);
+    return invoice;
+  }
+
+  async update(id: string, dto: UpdateSupplierInvoiceDto): Promise<SupplierInvoice> {
+    const invoice = await this.findOne(id);
+    if (invoice.voidedAt) throw new RecordAlreadyVoidedError('supplier invoice');
+    return this.prisma.supplierInvoice.update({
+      where: { id },
+      data: {
+        ...(dto.invoiceNo !== undefined ? { invoiceNo: dto.invoiceNo } : {}),
+        ...(dto.dueDate !== undefined ? { dueDate: new Date(dto.dueDate) } : {}),
+      },
+    });
+  }
+
+  async void(id: string, voidedBy: string, reason: string): Promise<SupplierInvoice> {
+    const invoice = await this.findOne(id);
+    if (invoice.voidedAt) throw new RecordAlreadyVoidedError('supplier invoice');
+    if (invoice.amountPaid.greaterThan(0)) {
+      throw new SupplierInvoiceNotVoidableError('payments have already been allocated to it — void those payments first');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await this.suppliersService.recordLedgerEntry(
+        tx,
+        invoice.supplierId,
+        'void_reversal',
+        invoice.amount.neg(),
+        'supplier_invoices',
+        invoice.id,
+      );
+      return tx.supplierInvoice.update({
+        where: { id },
+        data: { status: 'voided', voidedAt: new Date(), voidedBy, voidReason: reason },
+      });
+    });
+  }
 
   async create(dto: CreateSupplierInvoiceDto): Promise<SupplierInvoice> {
     return this.prisma.$transaction(async (tx) => {

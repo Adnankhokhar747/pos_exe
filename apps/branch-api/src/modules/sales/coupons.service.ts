@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Coupon, Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertCouponDto } from './dto/upsert-coupon.dto';
+import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { InvalidCouponError } from '../../common/exceptions/domain-exception';
 
 type Tx = Prisma.TransactionClient | PrismaClient;
@@ -12,6 +13,27 @@ export class CouponsService {
 
   list(tenantId: string): Promise<Coupon[]> {
     return this.prisma.coupon.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  findOne(tenantId: string, id: string): Promise<Coupon | null> {
+    return this.prisma.coupon.findFirst({ where: { id, tenantId } });
+  }
+
+  update(tenantId: string, id: string, dto: UpdateCouponDto): Promise<Coupon> {
+    return this.prisma.coupon.update({
+      where: { id },
+      data: {
+        ...(dto.discountType ? { discountType: dto.discountType } : {}),
+        ...(dto.discountValue !== undefined ? { discountValue: new Prisma.Decimal(dto.discountValue) } : {}),
+        ...(dto.expiryDate !== undefined ? { expiryDate: new Date(dto.expiryDate) } : {}),
+        ...(dto.usageLimit !== undefined ? { usageLimit: dto.usageLimit } : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+      },
+    });
+  }
+
+  deactivate(tenantId: string, id: string): Promise<Coupon> {
+    return this.prisma.coupon.update({ where: { id }, data: { isActive: false } });
   }
 
   create(tenantId: string, dto: UpsertCouponDto): Promise<Coupon> {

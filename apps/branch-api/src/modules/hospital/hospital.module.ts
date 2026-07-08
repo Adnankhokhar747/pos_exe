@@ -6,6 +6,7 @@ import { PatientsController } from './patients.controller';
 import { PatientsService } from './patients.service';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
+import { AppointmentBillingService } from './appointment-billing.service';
 import { QueueController } from './queue.controller';
 import { TokenSequenceService } from './token-sequence.service';
 import { HospitalScopeService } from './hospital-scope.service';
@@ -30,10 +31,11 @@ import { ModuleEntitlementsModule } from '../module-entitlements/module-entitlem
     DoctorsService,
     PatientsService,
     AppointmentsService,
+    AppointmentBillingService,
     TokenSequenceService,
     HospitalScopeService,
     HospitalReportsService,
   ],
-  exports: [DoctorsService, PatientsService, AppointmentsService, TokenSequenceService, HospitalScopeService],
+  exports: [DoctorsService, PatientsService, AppointmentsService, AppointmentBillingService, TokenSequenceService, HospitalScopeService],
 })
 export class HospitalModule {}

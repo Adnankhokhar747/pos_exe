@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Customer, CustomerLedgerEntryType, LoyaltyTransactionType, Prisma, PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
@@ -49,9 +49,11 @@ export class CustomersService {
     return this.prisma.customer.findFirst({ where: { id, tenantId } });
   }
 
-  update(tenantId: string, id: string, dto: UpdateCustomerDto): Promise<Customer> {
-    return this.prisma.customer.update({
-      where: { id },
+  // Same tenant-scoping gap found across products/suppliers services: tenantId was
+  // accepted but never applied to the query. updateMany() + a count check closes it.
+  async update(tenantId: string, id: string, dto: UpdateCustomerDto): Promise<Customer> {
+    const { count } = await this.prisma.customer.updateMany({
+      where: { id, tenantId },
       data: {
         name: dto.name,
         phone: dto.phone,
@@ -62,10 +64,14 @@ export class CustomersService {
         isActive: dto.isActive,
       },
     });
+    if (count === 0) throw new NotFoundException(`Customer ${id} not found.`);
+    return this.prisma.customer.findUniqueOrThrow({ where: { id } });
   }
 
-  deactivate(tenantId: string, id: string): Promise<Customer> {
-    return this.prisma.customer.update({ where: { id }, data: { isActive: false } });
+  async deactivate(tenantId: string, id: string): Promise<Customer> {
+    const { count } = await this.prisma.customer.updateMany({ where: { id, tenantId }, data: { isActive: false } });
+    if (count === 0) throw new NotFoundException(`Customer ${id} not found.`);
+    return this.prisma.customer.findUniqueOrThrow({ where: { id } });
   }
 
   getLedger(customerId: string) {

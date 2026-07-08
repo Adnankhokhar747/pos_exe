@@ -4,6 +4,9 @@ import { PatientsService } from './patients.service';
 import { AppointmentsService } from './appointments.service';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
+import { RecordAdvanceDto } from './dto/record-advance.dto';
+import { RefundPatientDto } from './dto/refund-patient.dto';
+import { SettleTreatmentDto } from './dto/settle-treatment.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
 import { LicenseGuard } from '../licensing/license.guard';
@@ -44,7 +47,11 @@ export class PatientsController {
 
   @Patch(':id')
   @RequirePermission('hospital.patient.manage')
-  update(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: UpdatePatientDto): Promise<Patient> {
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdatePatientDto,
+  ): Promise<Patient> {
     return this.patientsService.update(user.tenantId, id, dto);
   }
 
@@ -57,5 +64,37 @@ export class PatientsController {
   @Get(':id/appointments')
   getAppointmentHistory(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.appointmentsService.listForPatient(user.tenantId, id);
+  }
+
+  @Post(':id/advance')
+  @RequirePermission('hospital.patient.manage')
+  recordAdvance(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: RecordAdvanceDto,
+  ) {
+    return this.patientsService.recordAdvance(user.tenantId, id, user.userId, dto);
+  }
+
+  @Post(':id/refund')
+  @RequirePermission('hospital.patient.manage')
+  refund(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: RefundPatientDto) {
+    return this.patientsService.refund(user.tenantId, id, user.userId, dto);
+  }
+
+  @Post(':id/settle-treatment')
+  @RequirePermission('hospital.patient.manage')
+  settleTreatment(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: SettleTreatmentDto) {
+    return this.patientsService.settleTreatment(user.tenantId, id, user.userId, dto);
+  }
+
+  @Get(':id/ledger')
+  getLedger(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.patientsService.getLedger(user.tenantId, id);
+  }
+
+  @Get(':id/pos-invoices')
+  getPosInvoices(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.patientsService.getPatientPosInvoices(user.tenantId, id);
   }
 }

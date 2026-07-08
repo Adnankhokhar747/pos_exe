@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
 import { LoginPage } from './pages/LoginPage';
 import { PosPage } from './pages/PosPage';
 import { CustomersPage } from './pages/CustomersPage';
@@ -30,9 +31,17 @@ function RequireAuth({
   permission?: string;
   requiredModule?: string;
 }): JSX.Element {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { isBlocked } = useLicense();
   const { isModuleEnabled } = useModules();
+
+  if (isLoading) {
+    return (
+      <Box display="flex" alignItems="center" justifyContent="center" height="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isBlocked) return <LicenseBlockedScreen />;

@@ -128,3 +128,156 @@ export class TokenIssuanceConflictError extends DomainException {
     super('Too many tokens are being issued for this doctor at once. Please try again.');
   }
 }
+
+export class BillAlreadyFinalizedError extends DomainException {
+  readonly code = 'bill_already_finalized';
+  readonly httpStatus = 409;
+
+  constructor() {
+    super('A bill has already been finalized for this appointment.');
+  }
+}
+
+export class AppointmentNotBillableError extends DomainException {
+  readonly code = 'appointment_not_billable';
+  readonly httpStatus = 422;
+
+  constructor(status: string) {
+    super(`Cannot bill an appointment with status "${status}". Must be "confirmed".`);
+  }
+}
+
+export class InsufficientPatientBalanceError extends DomainException {
+  readonly code = 'insufficient_patient_balance';
+  readonly httpStatus = 422;
+
+  constructor(available: string, requested: string) {
+    super(`Patient advance balance ${available} is less than requested advance applied ${requested}.`);
+  }
+}
+
+export class UnderpaidBillError extends DomainException {
+  readonly code = 'underpaid_bill';
+  readonly httpStatus = 422;
+
+  constructor(due: string, paid: string) {
+    super(`Bill total ${due} exceeds total payment received ${paid}. Patient must fully settle the bill.`);
+  }
+}
+
+export class InvalidPatientAdvancePaymentError extends DomainException {
+  readonly code = 'invalid_patient_advance_payment';
+  readonly httpStatus = 422;
+
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class RefundExceedsBalanceError extends DomainException {
+  readonly code = 'refund_exceeds_balance';
+  readonly httpStatus = 422;
+
+  constructor(available: string, requested: string) {
+    super(`Patient advance balance ${available} is less than requested refund ${requested}.`);
+  }
+}
+
+export class CategoryInUseError extends DomainException {
+  readonly code = 'category_in_use';
+  readonly httpStatus = 409;
+
+  constructor(productCount: number) {
+    super(`Cannot delete this category: ${productCount} product(s) are still assigned to it.`);
+  }
+}
+
+export class CurrencyInUseError extends DomainException {
+  readonly code = 'currency_in_use';
+  readonly httpStatus = 409;
+
+  constructor(reason: string) {
+    super(`Cannot delete this currency: ${reason}.`);
+  }
+}
+
+export class LastActiveBranchError extends DomainException {
+  readonly code = 'last_active_branch';
+  readonly httpStatus = 409;
+
+  constructor() {
+    super('Cannot deactivate the only active branch for this company.');
+  }
+}
+
+export class SystemRoleImmutableError extends DomainException {
+  readonly code = 'system_role_immutable';
+  readonly httpStatus = 409;
+
+  constructor(name: string) {
+    super(`"${name}" is a built-in system role and cannot be modified or deleted.`);
+  }
+}
+
+export class RoleInUseError extends DomainException {
+  readonly code = 'role_in_use';
+  readonly httpStatus = 409;
+
+  constructor(userCount: number) {
+    super(`Cannot delete this role: ${userCount} user(s) are still assigned to it.`);
+  }
+}
+
+export class AppointmentNotDeletableError extends DomainException {
+  readonly code = 'appointment_not_deletable';
+  readonly httpStatus = 409;
+
+  constructor() {
+    super('Cannot delete a completed appointment: it has a finalized bill and financial records.');
+  }
+}
+
+export class RecordAlreadyVoidedError extends DomainException {
+  readonly code = 'record_already_voided';
+  readonly httpStatus = 409;
+
+  constructor(entity: string) {
+    super(`This ${entity} is already voided.`);
+  }
+}
+
+export class PurchaseOrderNotCancellableError extends DomainException {
+  readonly code = 'purchase_order_not_cancellable';
+  readonly httpStatus = 409;
+
+  constructor(status: string) {
+    super(`Cannot cancel a purchase order with status "${status}".`);
+  }
+}
+
+export class PurchaseOrderNotEditableError extends DomainException {
+  readonly code = 'purchase_order_not_editable';
+  readonly httpStatus = 409;
+
+  constructor(status: string) {
+    super(`Cannot edit a purchase order with status "${status}". Only draft orders can be edited.`);
+  }
+}
+
+export class GoodsReceiptNotVoidableError extends DomainException {
+  readonly code = 'goods_receipt_not_voidable';
+  readonly httpStatus = 409;
+
+  constructor(reason: string) {
+    super(`Cannot void this goods receipt: ${reason}.`);
+  }
+}
+
+export class SupplierInvoiceNotVoidableError extends DomainException {
+  readonly code = 'supplier_invoice_not_voidable';
+  readonly httpStatus = 409;
+
+  constructor(reason: string) {
+    super(`Cannot void this supplier invoice: ${reason}.`);
+  }
+}

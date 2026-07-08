@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { StockTransfer } from '@prisma/client';
 import { StockTransfersService } from './stock-transfers.service';
 import { CreateStockTransferDto } from './dto/create-stock-transfer.dto';
@@ -15,6 +15,13 @@ export class StockTransfersController {
   @Get()
   list(): Promise<StockTransfer[]> {
     return this.stockTransfersService.list();
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const transfer = await this.stockTransfersService.findOne(id);
+    if (!transfer) throw new NotFoundException(`Stock transfer ${id} not found.`);
+    return transfer;
   }
 
   @Post()

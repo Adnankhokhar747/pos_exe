@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { Prisma, SupplierPayment } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, SupplierInvoiceStatus, SupplierPayment } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SuppliersService } from '../suppliers/suppliers.service';
 import { CreateSupplierPaymentDto } from './dto/create-supplier-payment.dto';
-import { PaymentMismatchError } from '../../common/exceptions/domain-exception';
+import { UpdateSupplierPaymentDto } from './dto/update-supplier-payment.dto';
+import { PaymentMismatchError, RecordAlreadyVoidedError } from '../../common/exceptions/domain-exception';
 
 @Injectable()
 export class SupplierPaymentsService {
@@ -11,6 +12,61 @@ export class SupplierPaymentsService {
     private readonly prisma: PrismaService,
     private readonly suppliersService: SuppliersService,
   ) {}
+
+  async findOne(id: string) {
+    const payment = await this.prisma.supplierPayment.findUnique({ where: { id }, include: { allocations: true } });
+    if (!payment) throw new NotFoundException(`Supplier payment ${id} not found.`);
+    return payment;
+  }
+
+  async update(id: string, dto: UpdateSupplierPaymentDto): Promise<SupplierPayment> {
+    const payment = await this.findOne(id);
+    if (payment.voidedAt) throw new RecordAlreadyVoidedError('supplier payment');
+    return this.prisma.supplierPayment.update({
+      where: { id },
+      data: { ...(dto.method !== undefined ? { method: dto.method } : {}) },
+    });
+  }
+
+  // Reverses each invoice allocation this payment made and re-derives that
+  // invoice's paid status from the resulting amountPaid, then reverses the
+  // ledger entry so the supplier balance nets back to where it was.
+  async void(id: string, voidedBy: string, reason: string): Promise<SupplierPayment> {
+    const payment = await this.findOne(id);
+    if (payment.voidedAt) throw new RecordAlreadyVoidedError('supplier payment');
+
+    return this.prisma.$transaction(async (tx) => {
+      for (const allocation of payment.allocations) {
+        const invoice = await tx.supplierInvoice.update({
+          where: { id: allocation.supplierInvoiceId },
+          data: { amountPaid: { decrement: allocation.amountAllocated } },
+        });
+        if (!invoice.voidedAt) {
+          const status: SupplierInvoiceStatus = invoice.amountPaid.lessThanOrEqualTo(0)
+            ? 'unpaid'
+            : invoice.amountPaid.gte(invoice.amount)
+              ? 'paid'
+              : 'partially_paid';
+          await tx.supplierInvoice.update({ where: { id: invoice.id }, data: { status } });
+        }
+      }
+
+      await this.suppliersService.recordLedgerEntry(
+        tx,
+        payment.supplierId,
+        'void_reversal',
+        payment.amount,
+        'supplier_payments',
+        payment.id,
+      );
+
+      return tx.supplierPayment.update({
+        where: { id },
+        data: { voidedAt: new Date(), voidedBy, voidReason: reason },
+        include: { allocations: true },
+      });
+    });
+  }
 
   async create(dto: CreateSupplierPaymentDto): Promise<SupplierPayment> {
     const amount = new Prisma.Decimal(dto.amount);

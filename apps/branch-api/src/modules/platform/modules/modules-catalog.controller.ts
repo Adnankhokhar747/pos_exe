@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ModuleCatalog } from '@prisma/client';
 import { ModulesCatalogService } from './modules-catalog.service';
 import { CreateModuleCatalogDto } from './dto/create-module-catalog.dto';
@@ -15,6 +15,11 @@ export class ModulesCatalogController {
     return this.modulesCatalogService.list();
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string): Promise<ModuleCatalog> {
+    return this.modulesCatalogService.findOne(id);
+  }
+
   @Post()
   create(@Body() dto: CreateModuleCatalogDto): Promise<ModuleCatalog> {
     return this.modulesCatalogService.create(dto);
@@ -23,5 +28,10 @@ export class ModulesCatalogController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: UpdateModuleCatalogDto): Promise<ModuleCatalog> {
     return this.modulesCatalogService.update(id, dto);
+  }
+
+  @Delete(':id')
+  deactivate(@Param('id') id: string): Promise<ModuleCatalog> {
+    return this.modulesCatalogService.deactivate(id);
   }
 }

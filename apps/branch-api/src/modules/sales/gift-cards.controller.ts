@@ -1,8 +1,9 @@
-﻿import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { GiftCard } from '@prisma/client';
 import { GiftCardsService } from './gift-cards.service';
 import { IssueGiftCardDto } from './dto/issue-gift-card.dto';
 import { ReloadGiftCardDto } from './dto/reload-gift-card.dto';
+import { UpdateGiftCardDto } from './dto/update-gift-card.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
 import { LicenseGuard } from '../licensing/license.guard';
@@ -39,5 +40,32 @@ export class GiftCardsController {
     @Body() dto: ReloadGiftCardDto,
   ): Promise<GiftCard> {
     return this.giftCardsService.reload(user.tenantId, code, dto.amount);
+  }
+
+  @Get(':id')
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<GiftCard> {
+    const giftCard = await this.giftCardsService.findOne(user.tenantId, id);
+    if (!giftCard) throw new NotFoundException(`Gift card ${id} not found.`);
+    return giftCard;
+  }
+
+  @Patch(':id')
+  @RequirePermission('settings.write')
+  async update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateGiftCardDto,
+  ): Promise<GiftCard> {
+    const giftCard = await this.giftCardsService.findOne(user.tenantId, id);
+    if (!giftCard) throw new NotFoundException(`Gift card ${id} not found.`);
+    return this.giftCardsService.update(user.tenantId, id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermission('settings.write')
+  async deactivate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<GiftCard> {
+    const giftCard = await this.giftCardsService.findOne(user.tenantId, id);
+    if (!giftCard) throw new NotFoundException(`Gift card ${id} not found.`);
+    return this.giftCardsService.deactivate(user.tenantId, id);
   }
 }

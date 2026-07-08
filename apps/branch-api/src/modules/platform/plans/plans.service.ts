@@ -44,4 +44,9 @@ export class PlansService {
       },
     });
   }
+
+  async deactivate(id: string): Promise<Plan> {
+    await this.findOne(id);
+    return this.prisma.plan.update({ where: { id }, data: { isActive: false } });
+  }
 }

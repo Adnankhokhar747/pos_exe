@@ -5,7 +5,10 @@ import { ModuleEntitlementService } from '../module-entitlements/module-entitlem
 import { TokenSequenceService } from './token-sequence.service';
 import { DoctorScope } from './hospital-scope.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import { InvalidAppointmentStatusTransitionError } from '../../common/exceptions/domain-exception';
+import {
+  AppointmentNotDeletableError,
+  InvalidAppointmentStatusTransitionError,
+} from '../../common/exceptions/domain-exception';
 
 export interface QueueStatus {
   currentToken: number;
@@ -14,7 +17,11 @@ export interface QueueStatus {
   completedCount: number;
 }
 
-const APPOINTMENT_INCLUDE = { doctor: true, patient: true } as const;
+const APPOINTMENT_INCLUDE = {
+  doctor: true,
+  patient: true,
+  bill: { select: { id: true, isDraft: true, totalDue: true, totalCollected: true, advanceApplied: true, advanceCredited: true, patientBalance: true, finalizedAt: true } },
+} as const;
 
 // Legal status transitions: booked -> confirmed/cancelled; confirmed -> completed/no_show;
 // completed/cancelled/no_show are terminal. Walk-ins skip "booked" entirely (token issued
@@ -151,6 +158,22 @@ export class AppointmentsService {
         cancelledAt: status === 'cancelled' ? now : undefined,
       },
       include: APPOINTMENT_INCLUDE,
+    });
+  }
+
+  async remove(tenantId: string, id: string, scope: DoctorScope): Promise<void> {
+    const appointment = await this.findOne(tenantId, id, scope);
+    if (appointment.status === 'completed') throw new AppointmentNotDeletableError();
+
+    await this.prisma.$transaction(async (tx) => {
+      const draftBill = await tx.appointmentBill.findUnique({ where: { appointmentId: id } });
+      if (draftBill) {
+        await tx.appointmentBillPayment.deleteMany({ where: { billId: draftBill.id } });
+        await tx.appointmentBillLine.deleteMany({ where: { billId: draftBill.id } });
+        await tx.appointmentBill.delete({ where: { id: draftBill.id } });
+      }
+      await tx.patientLedgerEntry.deleteMany({ where: { appointmentId: id } });
+      await tx.appointment.delete({ where: { id } });
     });
   }
 

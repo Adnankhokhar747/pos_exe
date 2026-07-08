@@ -12,4 +12,8 @@ export class SerialNumbersService {
       orderBy: { createdAt: 'asc' },
     });
   }
+
+  findOne(id: string): Promise<SerialNumber | null> {
+    return this.prisma.serialNumber.findUnique({ where: { id } });
+  }
 }

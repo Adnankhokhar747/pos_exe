@@ -5,11 +5,28 @@ directories:
   buildResources: build
 files:
   - dist/**
+# The embedded Postgres binaries are real native executables spawned as child
+# processes at runtime, and embedded-postgres chmod's them executable on first
+# run — `asarUnpack` still leaves the *path* embedded-postgres computes
+# pointing at the virtual app.asar entry, and chmod isn't one of the fs calls
+# Electron transparently redirects to the real unpacked file for. Disabling
+# asar entirely (accepted tradeoff per docs/14-windows-exe-build-strategy.md
+# §7 — the size/perf cost of a few thousand extra loose files is small next to
+# the embedded Postgres binary itself) sidesteps the whole class of native
+# binary + asar path issues rather than chasing them dependency by dependency.
+asar: false
 extraResources:
-  - from: ../branch-api/dist
+  # ../branch-api/bundle is a self-contained esbuild bundle (see
+  # apps/branch-api's package.json "package:bundle" script) — plain `nest
+  # build` output alone isn't runnable here since it still requires its
+  # node_modules tree, which pnpm links via symlinks into the workspace-root
+  # store that won't exist on an installed machine.
+  - from: ../branch-api/bundle
     to: branch-api
   - from: ../renderer/dist
     to: renderer
+  - from: ../admin-portal/dist
+    to: admin-portal
 win:
   target:
     - target: nsis
@@ -19,7 +36,7 @@ win:
   # left unset here since the signing identity is a CI secret, not a repo file.
 nsis:
   oneClick: false
-  perMachine: true
+  perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
 publish:

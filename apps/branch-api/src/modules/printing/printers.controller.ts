@@ -47,6 +47,6 @@ export class PrintersController {
   async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<Printer> {
     const printer = await this.printersService.findOne(user.tenantId, id);
     if (!printer) throw new NotFoundException(`Printer ${id} not found.`);
-    return this.printersService.remove(id);
+    return this.printersService.remove(user.tenantId, id);
   }
 }

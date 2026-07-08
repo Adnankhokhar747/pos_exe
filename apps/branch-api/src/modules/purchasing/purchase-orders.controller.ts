@@ -1,7 +1,9 @@
-﻿import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { PurchaseOrder } from '@prisma/client';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { CreatePurchaseOrderDto } from './dto/create-purchase-order.dto';
+import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
+import { VoidPurchaseOrderDto } from './dto/void.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/auth/permissions.guard';
 import { LicenseGuard } from '../licensing/license.guard';
@@ -29,5 +31,30 @@ export class PurchaseOrdersController {
   @RequirePermission('purchase.approve')
   send(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<PurchaseOrder> {
     return this.purchaseOrdersService.send(user.tenantId, id);
+  }
+
+  @Get(':id')
+  findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.purchaseOrdersService.findOne(user.tenantId, id);
+  }
+
+  @Patch(':id')
+  @RequirePermission('purchase.create')
+  update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdatePurchaseOrderDto,
+  ): Promise<PurchaseOrder> {
+    return this.purchaseOrdersService.update(user.tenantId, id, dto);
+  }
+
+  @Post(':id/void')
+  @RequirePermission('purchase.approve')
+  void(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: VoidPurchaseOrderDto,
+  ): Promise<PurchaseOrder> {
+    return this.purchaseOrdersService.void(user.tenantId, id, user.userId, dto.reason);
   }
 }

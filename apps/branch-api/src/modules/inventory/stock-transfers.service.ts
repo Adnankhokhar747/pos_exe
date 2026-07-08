@@ -94,4 +94,8 @@ export class StockTransfersService {
       take: 200,
     });
   }
+
+  findOne(id: string) {
+    return this.prisma.stockTransfer.findUnique({ where: { id }, include: { lines: true } });
+  }
 }

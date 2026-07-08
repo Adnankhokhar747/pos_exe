@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+﻿import { Controller, Get, NotFoundException, Param, Query, UseGuards } from '@nestjs/common';
 import { SerialNumber, SerialNumberStatus } from '@prisma/client';
 import { SerialNumbersService } from './serial-numbers.service';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
@@ -17,5 +17,12 @@ export class SerialNumbersController {
     @Query('status') status?: SerialNumberStatus,
   ): Promise<SerialNumber[]> {
     return this.serialNumbersService.list(warehouseId, productId, status);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string): Promise<SerialNumber> {
+    const serialNumber = await this.serialNumbersService.findOne(id);
+    if (!serialNumber) throw new NotFoundException(`Serial number ${id} not found.`);
+    return serialNumber;
   }
 }

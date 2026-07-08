@@ -27,45 +27,61 @@ export class InvoicesController {
     return this.invoicesService.createInvoice(user.tenantId, user.userId, dto);
   }
 
+  // Every method below used to trust a client-supplied branchId/invoice id with
+  // no check that it actually belongs to the caller's own tenant — a Company
+  // Admin (or even a Cashier) from one company could read, hold-against,
+  // resume-delete, or void another company's invoices just by knowing or
+  // guessing an id. Each is now scoped through the branch's tenantId.
+  private async assertBranchInTenant(tenantId: string, branchId: string): Promise<void> {
+    const branch = await this.prisma.branch.findFirst({ where: { id: branchId, tenantId } });
+    if (!branch) throw new NotFoundException(`Branch ${branchId} not found.`);
+  }
+
   @Post('hold')
   @RequirePermission('pos.sale.create')
-  hold(@CurrentUser() user: AuthenticatedUser, @Body() dto: HoldInvoiceDto): Promise<Invoice> {
+  async hold(@CurrentUser() user: AuthenticatedUser, @Body() dto: HoldInvoiceDto): Promise<Invoice> {
+    await this.assertBranchInTenant(user.tenantId, dto.branchId);
     return this.invoicesService.holdInvoice(dto.branchId, user.userId, dto);
   }
 
   @Get('held')
-  listHeld(@Query('branchId') branchId: string) {
+  async listHeld(@CurrentUser() user: AuthenticatedUser, @Query('branchId') branchId: string) {
+    await this.assertBranchInTenant(user.tenantId, branchId);
     return this.invoicesService.listHeld(branchId);
   }
 
   @Post(':id/resume')
   @RequirePermission('pos.sale.create')
-  resume(@Param('id') id: string) {
-    return this.invoicesService.resumeInvoice(id);
+  resume(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.invoicesService.resumeInvoice(user.tenantId, id);
   }
 
   @Post(':id/void')
   @RequirePermission('pos.sale.void')
   voidInvoice(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string, @Body() dto: VoidInvoiceDto): Promise<Invoice> {
-    return this.invoicesService.voidInvoice(id, user.userId, dto.reason);
+    return this.invoicesService.voidInvoice(user.tenantId, id, user.userId, dto.reason);
   }
 
   @Post(':id/returns')
   @RequirePermission('invoice.return.partial')
-  createReturn(
+  async createReturn(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: CreateReturnDto,
   ) {
-    return this.prisma.invoice.findUniqueOrThrow({ where: { id } }).then((original) =>
-      this.invoicesService.createReturn(original.branchId, user.userId, id, dto),
-    );
+    const original = await this.prisma.invoice.findFirst({ where: { id, branch: { tenantId: user.tenantId } } });
+    if (!original) throw new NotFoundException(`Invoice ${id} not found.`);
+    return this.invoicesService.createReturn(original.branchId, user.userId, id, dto);
   }
 
   @Get()
-  list(@Query('branchId') branchId: string, @Query('status') status?: string) {
+  list(@CurrentUser() user: AuthenticatedUser, @Query('branchId') branchId: string, @Query('status') status?: string) {
     return this.prisma.invoice.findMany({
-      where: { branchId, ...(status ? { status: status as never } : { status: { not: 'held' } }) },
+      where: {
+        branchId,
+        branch: { tenantId: user.tenantId },
+        ...(status ? { status: status as never } : { status: { not: 'held' } }),
+      },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
@@ -73,10 +89,11 @@ export class InvoicesController {
 
   @Get(':id')
   async getInvoice(
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
   ): Promise<Invoice & { lines: unknown[]; payments: unknown[]; customer: unknown }> {
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id },
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id, branch: { tenantId: user.tenantId } },
       include: { lines: { include: { product: true } }, payments: true, customer: true },
     });
     if (!invoice) throw new NotFoundException(`Invoice ${id} not found.`);

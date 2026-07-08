@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Get, NotFoundException, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { StockAdjustment } from '@prisma/client';
 import { StockAdjustmentsService } from './stock-adjustments.service';
 import { CreateStockAdjustmentDto } from './dto/create-stock-adjustment.dto';
@@ -21,5 +21,12 @@ export class StockAdjustmentsController {
   @RequirePermission('stock.adjust')
   create(@Body() dto: CreateStockAdjustmentDto): Promise<StockAdjustment> {
     return this.stockAdjustmentsService.create(dto);
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const adjustment = await this.stockAdjustmentsService.findOne(id);
+    if (!adjustment) throw new NotFoundException(`Stock adjustment ${id} not found.`);
+    return adjustment;
   }
 }

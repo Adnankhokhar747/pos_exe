@@ -6,6 +6,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class BatchesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  findOne(id: string): Promise<(Batch & { product: { name: string } }) | null> {
+    return this.prisma.batch.findUnique({
+      where: { id },
+      include: { product: { select: { name: true } } },
+    });
+  }
+
   list(warehouseId?: string, productId?: string): Promise<(Batch & { product: { name: string } })[]> {
     return this.prisma.batch.findMany({
       where: { warehouseId, productId },

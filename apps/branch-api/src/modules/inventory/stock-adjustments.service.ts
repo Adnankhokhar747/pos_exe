@@ -70,4 +70,8 @@ export class StockAdjustmentsService {
       take: 200,
     });
   }
+
+  findOne(id: string) {
+    return this.prisma.stockAdjustment.findUnique({ where: { id }, include: { lines: true } });
+  }
 }

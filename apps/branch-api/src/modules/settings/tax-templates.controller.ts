@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { TaxTemplate } from '@prisma/client';
 import { TaxTemplatesService } from './tax-templates.service';
 import { UpsertTaxTemplateDto } from './dto/upsert-tax-template.dto';
@@ -19,6 +19,13 @@ export class TaxTemplatesController {
     return this.taxTemplatesService.list(user.tenantId);
   }
 
+  @Get(':id')
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<TaxTemplate> {
+    const taxTemplate = await this.taxTemplatesService.findOne(user.tenantId, id);
+    if (!taxTemplate) throw new NotFoundException(`Tax template ${id} not found.`);
+    return taxTemplate;
+  }
+
   @Post()
   @RequirePermission('settings.write')
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpsertTaxTemplateDto): Promise<TaxTemplate> {
@@ -33,5 +40,13 @@ export class TaxTemplatesController {
     @Body() dto: UpsertTaxTemplateDto,
   ): Promise<TaxTemplate> {
     return this.taxTemplatesService.update(user.tenantId, id, dto);
+  }
+
+  @Delete(':id')
+  @RequirePermission('settings.write')
+  async deactivate(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string): Promise<TaxTemplate> {
+    const taxTemplate = await this.taxTemplatesService.findOne(user.tenantId, id);
+    if (!taxTemplate) throw new NotFoundException(`Tax template ${id} not found.`);
+    return this.taxTemplatesService.deactivate(user.tenantId, id);
   }
 }

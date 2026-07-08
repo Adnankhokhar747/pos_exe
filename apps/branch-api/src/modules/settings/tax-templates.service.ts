@@ -11,6 +11,14 @@ export class TaxTemplatesService {
     return this.prisma.taxTemplate.findMany({ where: { tenantId }, orderBy: { name: 'asc' } });
   }
 
+  findOne(tenantId: string, id: string): Promise<TaxTemplate | null> {
+    return this.prisma.taxTemplate.findFirst({ where: { id, tenantId } });
+  }
+
+  deactivate(tenantId: string, id: string): Promise<TaxTemplate> {
+    return this.prisma.taxTemplate.update({ where: { id }, data: { isActive: false } });
+  }
+
   create(tenantId: string, dto: UpsertTaxTemplateDto): Promise<TaxTemplate> {
     return this.prisma.taxTemplate.create({
       data: {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CashDrawerSession, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -19,10 +19,16 @@ export class CashDrawerSessionsService {
     });
   }
 
+  // close() previously had zero tenant scoping anywhere (service or controller) —
+  // any authenticated user in ANY company could close (finalize the cash count of)
+  // another company's drawer session just by knowing/guessing its UUID. Scoped
+  // through the branch relation like the other tenant-isolation fixes in this pass.
+  //
   // Expected cash = opening float + every cash payment recorded on a completed
   // sale since the drawer opened, for this branch — docs/00-functional-specification.md §20.
-  async close(id: string, closedBy: string, closingCount: string): Promise<CashDrawerSession> {
-    const session = await this.prisma.cashDrawerSession.findUniqueOrThrow({ where: { id } });
+  async close(tenantId: string, id: string, closedBy: string, closingCount: string): Promise<CashDrawerSession> {
+    const session = await this.prisma.cashDrawerSession.findFirst({ where: { id, branch: { tenantId } } });
+    if (!session) throw new NotFoundException(`Cash drawer session ${id} not found.`);
 
     const cashPayments = await this.prisma.payment.aggregate({
       where: {

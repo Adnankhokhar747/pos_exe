@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Printer } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertPrinterDto } from './dto/upsert-printer.dto';
@@ -37,6 +37,9 @@ export class PrintersService {
     });
   }
 
+  // update()/remove() below are scoped through the controller's pre-check (findOne)
+  // today, but neither applied tenantId to its own mutating query — same
+  // defense-in-depth gap fixed across products/suppliers/customers services.
   update(tenantId: string, branchId: string, id: string, dto: UpsertPrinterDto): Promise<Printer> {
     return this.prisma.$transaction(async (tx) => {
       if (dto.isDefaultReceipt) {
@@ -51,8 +54,8 @@ export class PrintersService {
           data: { isDefaultInvoice: false },
         });
       }
-      return tx.printer.update({
-        where: { id },
+      const { count } = await tx.printer.updateMany({
+        where: { id, tenantId },
         data: {
           name: dto.name,
           type: dto.type,
@@ -61,10 +64,14 @@ export class PrintersService {
           isDefaultInvoice: dto.isDefaultInvoice ?? false,
         },
       });
+      if (count === 0) throw new NotFoundException(`Printer ${id} not found.`);
+      return tx.printer.findUniqueOrThrow({ where: { id } });
     });
   }
 
-  remove(id: string): Promise<Printer> {
+  async remove(tenantId: string, id: string): Promise<Printer> {
+    const printer = await this.prisma.printer.findFirst({ where: { id, tenantId } });
+    if (!printer) throw new NotFoundException(`Printer ${id} not found.`);
     return this.prisma.printer.delete({ where: { id } });
   }
 }

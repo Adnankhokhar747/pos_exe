@@ -39,6 +39,7 @@ const PAYMENT_METHODS = [
   'credit_sale',
   'store_credit',
   'gift_card',
+  'patient_advance',
 ] as const;
 
 export class InvoicePaymentDto {
@@ -68,6 +69,10 @@ export class CreateInvoiceDto {
   @IsOptional()
   @IsString()
   customerId?: string;
+
+  @IsOptional()
+  @IsString()
+  patientId?: string;
 
   @IsArray()
   @ArrayMinSize(1)

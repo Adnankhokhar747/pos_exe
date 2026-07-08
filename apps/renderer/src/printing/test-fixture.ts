@@ -6,6 +6,7 @@ export const TEST_INVOICE_FIXTURE: Invoice = {
   invoiceType: 'sale',
   status: 'completed',
   customerId: null,
+  patientId: null,
   customer: null,
   subtotal: '19.98',
   discountTotal: '0.00',
