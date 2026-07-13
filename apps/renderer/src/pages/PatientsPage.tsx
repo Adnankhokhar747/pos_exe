@@ -148,6 +148,7 @@ export function PatientsPage(): JSX.Element {
       setAdvanceForm({ amount: '', method: 'cash', reference: '', notes: '' });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patients-active'] });
+      queryClient.invalidateQueries({ queryKey: ['patients-pos-lookup'] });
       queryClient.invalidateQueries({ queryKey: ['patient-ledger', advanceTarget?.id] });
     },
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not record advance.'),
@@ -174,6 +175,7 @@ export function PatientsPage(): JSX.Element {
       setRefundForm({ amount: '', method: 'cash', reference: '', notes: '' });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patients-active'] });
+      queryClient.invalidateQueries({ queryKey: ['patients-pos-lookup'] });
       queryClient.invalidateQueries({ queryKey: ['patient-ledger', refundTarget?.id] });
     },
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not record refund.'),
@@ -198,6 +200,7 @@ export function PatientsPage(): JSX.Element {
       setSettleMethod('cash');
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patients-active'] });
+      queryClient.invalidateQueries({ queryKey: ['patients-pos-lookup'] });
       queryClient.invalidateQueries({ queryKey: ['patient-ledger', settleTarget?.id] });
     },
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not complete treatment.'),

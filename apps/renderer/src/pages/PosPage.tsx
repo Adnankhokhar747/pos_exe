@@ -76,12 +76,13 @@ export function PosPage(): JSX.Element {
   const ACTIVE_BRANCH_NAME = user!.branchName;
   const ACTIVE_WAREHOUSE_ID = user!.warehouseId;
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [cart, setCart] = useState<CartLine[]>([]);
   const [invoiceDiscount, setInvoiceDiscount] = useState('0');
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<
-    'cash' | 'debit_card' | 'credit_card' | 'bank_transfer' | 'mobile_wallet' | 'credit_sale' | 'store_credit' | 'gift_card'
+    'cash' | 'debit_card' | 'credit_card' | 'bank_transfer' | 'mobile_wallet' | 'credit_sale' | 'store_credit' | 'gift_card' | 'patient_advance'
   >('cash');
   const [receivedAmount, setReceivedAmount] = useState('');
   const [giftCardCode, setGiftCardCode] = useState('');
@@ -110,22 +111,25 @@ export function PosPage(): JSX.Element {
   });
 
   const productsQuery = useQuery({
-    queryKey: ['pos-grid', search],
+    queryKey: ['pos-grid', debouncedSearch],
     queryFn: () =>
       apiFetch<ProductWithStock[]>(
-        `/api/v1/products/pos-grid?warehouseId=${ACTIVE_WAREHOUSE_ID}&search=${encodeURIComponent(search)}`,
+        `/api/v1/products/pos-grid?warehouseId=${ACTIVE_WAREHOUSE_ID}&search=${encodeURIComponent(debouncedSearch)}`,
       ),
+    staleTime: 10_000,
   });
 
   const customersQuery = useQuery({
     queryKey: ['customers-lookup'],
     queryFn: () => apiFetch<Customer[]>('/api/v1/customers'),
+    staleTime: 30_000,
   });
 
   const patientsQuery = useQuery({
     queryKey: ['patients-pos-lookup'],
     queryFn: () => apiFetch<Patient[]>('/api/v1/hospital/patients'),
     retry: false,
+    staleTime: 15_000,
   });
 
   const cashCustomer = useMemo(
@@ -175,6 +179,12 @@ export function PosPage(): JSX.Element {
       setCurrencyCode(tenantSettingsQuery.data.baseCurrency);
     }
   }, [tenantSettingsQuery.data, currencyCode]);
+
+  // Debounce product search — avoids firing a new API call on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const createCustomerMutation = useMutation({
     mutationFn: () =>
@@ -226,6 +236,15 @@ export function PosPage(): JSX.Element {
   // which would incorrectly flag the payment as short and block checkout.
   const change = receivedAmount ? Math.round((Number(receivedAmount) - totals.grandTotal) * 100) / 100 : 0;
 
+  // Currency symbol — looks up the symbol (e.g. "$", "Rs") for the active currency code
+  // so amounts display as "Rs 7,896" rather than "USD7,896".
+  const cur = useMemo(() => {
+    const code = currencyCode || tenantSettingsQuery.data?.baseCurrency || '';
+    if (!code) return 'Rs';
+    const found = currenciesQuery.data?.find((c) => c.code === code);
+    return found?.symbol ?? code;
+  }, [currencyCode, tenantSettingsQuery.data?.baseCurrency, currenciesQuery.data]);
+
   function resetCart(): void {
     setCart([]);
     setInvoiceDiscount('0');
@@ -242,6 +261,12 @@ export function PosPage(): JSX.Element {
   }
 
   function buildPosPayments(grandTotal: number) {
+    // When the cashier selects "Patient Advance" as the payment method, the full amount
+    // comes from the patient's advance balance — no secondary payment entry needed.
+    if (paymentMethod === 'patient_advance' && linkedPatient) {
+      return [{ method: 'patient_advance', amount: money(grandTotal) }];
+    }
+
     const advAmt = Math.min(Number(patientAdvanceAmount) || 0, grandTotal);
     const remaining = grandTotal - advAmt;
     const payments = [];
@@ -286,18 +311,25 @@ export function PosPage(): JSX.Element {
           warehouseId: ACTIVE_WAREHOUSE_ID,
           customerId: customer?.id,
           patientId: linkedPatient?.id,
-          lines: cart.map((line) => ({
-            productId: line.productId,
-            quantity: String(line.quantity),
-            unitPrice: line.unitPrice,
-            discountValue: line.discountValue,
-            serialNumbers: line.trackSerials ? line.serialNumbers ?? [] : undefined,
-          })),
+          lines: cart.map((line) => {
+            const gross = line.quantity * Number(line.unitPrice);
+            const disc  = Number(line.discountValue || '0');
+            const net   = gross - disc;
+            const tax   = Math.round((net * Number(line.taxRatePct)) / 100 * 100) / 100;
+            return {
+              productId:    line.productId,
+              quantity:     String(line.quantity),
+              unitPrice:    line.unitPrice,
+              discountValue: line.discountValue,
+              taxAmount:    String(tax),
+              serialNumbers: line.trackSerials ? line.serialNumbers ?? [] : undefined,
+            };
+          }),
           invoiceDiscountValue: invoiceDiscount,
           payments: buildPosPayments(totals.grandTotal),
           couponCode: appliedCoupon?.code,
           loyaltyPointsToRedeem: loyaltyPointsToRedeem || undefined,
-          currencyCode: currencyCode || undefined,
+          currencyCode: currencyCode || tenantSettingsQuery.data?.baseCurrency || undefined,
         }),
       }),
     onSuccess: async (invoice) => {
@@ -306,6 +338,7 @@ export function PosPage(): JSX.Element {
       setPaymentOpen(false);
       queryClient.invalidateQueries({ queryKey: ['pos-grid'] });
       queryClient.invalidateQueries({ queryKey: ['customers-lookup'] });
+      queryClient.invalidateQueries({ queryKey: ['patients-pos-lookup'] });
       // A failure to build/open the print preview must never be surfaced as a sale failure —
       // the sale has already succeeded at this point.
       try {
@@ -510,7 +543,7 @@ export function PosPage(): JSX.Element {
                             {product.name}
                           </Typography>
                           <Typography variant="h6" sx={{ mb: 0.5 }}>
-                            ${Number(product.salePrice).toFixed(2)}
+                            {cur}{Number(product.salePrice).toFixed(2)}
                           </Typography>
                           <Chip
                             size="small"
@@ -544,7 +577,7 @@ export function PosPage(): JSX.Element {
               fullWidth
               options={patientsQuery.data ?? []}
               getOptionLabel={(p) =>
-                `${p.name}${Number(p.currentBalance) > 0 ? ` (Advance: ${Number(p.currentBalance).toLocaleString()})` : ''}`
+                `${p.name}${Number(p.currentBalance) > 0 ? ` (Advance: ${cur}${Number(p.currentBalance).toLocaleString()})` : ''}`
               }
               value={linkedPatient}
               onChange={(_, value) => { setLinkedPatient(value); setPatientAdvanceAmount(''); }}
@@ -591,7 +624,7 @@ export function PosPage(): JSX.Element {
                   <Box flex={1}>
                     <Typography variant="body2">{line.name}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      ${Number(line.unitPrice).toFixed(2)} each
+                      {cur}{Number(line.unitPrice).toFixed(2)} each
                     </Typography>
                   </Box>
                   <IconButton size="small" onClick={() => updateQuantity(line.productId, -1)}>
@@ -712,31 +745,31 @@ export function PosPage(): JSX.Element {
           <Stack spacing={0.5} mb={1}>
             <Box display="flex" justifyContent="space-between">
               <Typography variant="body2">Subtotal</Typography>
-              <Typography variant="body2">${money(totals.subtotal)}</Typography>
+              <Typography variant="body2">{cur}{money(totals.subtotal)}</Typography>
             </Box>
             <Box display="flex" justifyContent="space-between">
               <Typography variant="body2">Discount</Typography>
-              <Typography variant="body2">-${money(totals.discountTotal)}</Typography>
+              <Typography variant="body2">-{cur}{money(totals.discountTotal)}</Typography>
             </Box>
             <Box display="flex" justifyContent="space-between">
               <Typography variant="body2">Tax</Typography>
-              <Typography variant="body2">${money(totals.taxTotal)}</Typography>
+              <Typography variant="body2">{cur}{money(totals.taxTotal)}</Typography>
             </Box>
             {couponDiscount > 0 && (
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="body2">Coupon discount</Typography>
-                <Typography variant="body2">-${money(couponDiscount)}</Typography>
+                <Typography variant="body2">-{cur}{money(couponDiscount)}</Typography>
               </Box>
             )}
             {loyaltyDiscount > 0 && (
               <Box display="flex" justifyContent="space-between">
                 <Typography variant="body2">Loyalty discount</Typography>
-                <Typography variant="body2">-${money(loyaltyDiscount)}</Typography>
+                <Typography variant="body2">-{cur}{money(loyaltyDiscount)}</Typography>
               </Box>
             )}
             <Box display="flex" justifyContent="space-between">
               <Typography variant="h6">Grand Total</Typography>
-              <Typography variant="h6">${money(totals.grandTotal)}</Typography>
+              <Typography variant="h6">{cur}{money(totals.grandTotal)}</Typography>
             </Box>
           </Stack>
           <Stack direction="row" spacing={1}>
@@ -796,6 +829,7 @@ export function PosPage(): JSX.Element {
               disabled={
                 (paymentMethod === 'cash' && change < 0) ||
                 (paymentMethod === 'gift_card' && !giftCardCode) ||
+                (paymentMethod === 'patient_advance' && Number(linkedPatient?.currentBalance ?? 0) < totals.grandTotal) ||
                 cart.some((line) => line.trackSerials && (line.serialNumbers?.length ?? 0) !== line.quantity) ||
                 createInvoiceMutation.isPending
               }
@@ -806,8 +840,8 @@ export function PosPage(): JSX.Element {
           </>
         }
       >
-        <Typography gutterBottom>Grand Total: ${money(totals.grandTotal)}</Typography>
-          {linkedPatient && Number(linkedPatient.currentBalance) > 0 && (
+        <Typography gutterBottom>Grand Total: {cur}{money(totals.grandTotal)}</Typography>
+          {linkedPatient && Number(linkedPatient.currentBalance) > 0 && paymentMethod !== 'patient_advance' && (
             <Box sx={{ bgcolor: 'success.50', border: '1px solid', borderColor: 'success.200', borderRadius: 1, p: 1.5, mb: 1.5, mt: 1 }}>
               <Typography variant="body2" color="success.main" gutterBottom>
                 <strong>Patient Advance Balance: {Number(linkedPatient.currentBalance).toLocaleString()}</strong>
@@ -815,7 +849,7 @@ export function PosPage(): JSX.Element {
               <TextField
                 fullWidth
                 size="small"
-                label="Apply from patient advance"
+                label="Apply partial advance (leave 0 to not use)"
                 type="number"
                 value={patientAdvanceAmount}
                 onChange={(e) => {
@@ -824,7 +858,7 @@ export function PosPage(): JSX.Element {
                   setPatientAdvanceAmount(String(v));
                 }}
                 inputProps={{ min: 0, max: Math.min(Number(linkedPatient.currentBalance), totals.grandTotal) }}
-                helperText={`Remaining after advance: $${money(Math.max(0, totals.grandTotal - (Number(patientAdvanceAmount) || 0)))}`}
+                helperText={`Remaining after advance: ${cur}${money(Math.max(0, totals.grandTotal - (Number(patientAdvanceAmount) || 0)))}`}
               />
             </Box>
           )}
@@ -848,6 +882,11 @@ export function PosPage(): JSX.Element {
               Store Credit
             </MenuItem>
             <MenuItem value="gift_card">Gift Card</MenuItem>
+            {linkedPatient && Number(linkedPatient.currentBalance) > 0 && (
+              <MenuItem value="patient_advance">
+                Patient Advance (Balance: {Number(linkedPatient.currentBalance).toLocaleString()})
+              </MenuItem>
+            )}
           </TextField>
           {paymentMethod === 'cash' && (
             <TextField
@@ -861,7 +900,7 @@ export function PosPage(): JSX.Element {
           )}
           {paymentMethod === 'cash' && (
             <Typography sx={{ mt: 1 }} color={change < 0 ? 'error' : 'text.primary'}>
-              Change: ${money(Number.isFinite(change) ? change : 0)}
+              Change: {cur}{money(Number.isFinite(change) ? change : 0)}
             </Typography>
           )}
           {paymentMethod === 'gift_card' && (
@@ -873,6 +912,13 @@ export function PosPage(): JSX.Element {
               onChange={(e) => setGiftCardCode(e.target.value.toUpperCase())}
               sx={{ mt: 2 }}
             />
+          )}
+          {paymentMethod === 'patient_advance' && linkedPatient && (
+            <Typography sx={{ mt: 1.5 }} variant="body2" color={Number(linkedPatient.currentBalance) >= totals.grandTotal ? 'success.main' : 'error.main'}>
+              {Number(linkedPatient.currentBalance) >= totals.grandTotal
+                ? `Full amount of ${cur}${money(totals.grandTotal)} will be deducted from advance balance.`
+                : `Insufficient advance balance — available: ${cur}${money(Number(linkedPatient.currentBalance))}`}
+            </Typography>
           )}
       </AppModal>
 
@@ -897,7 +943,7 @@ export function PosPage(): JSX.Element {
               >
                 <ListItemText
                   primary={invoice.heldLabel ?? invoice.invoiceNo}
-                  secondary={`Total: $${Number(invoice.grandTotal).toFixed(2)} · ${new Date(invoice.createdAt).toLocaleString()}`}
+                  secondary={`Total: ${cur}${Number(invoice.grandTotal).toFixed(2)} · ${new Date(invoice.createdAt).toLocaleString()}`}
                 />
               </ListItemButton>
             ))}
@@ -940,7 +986,7 @@ export function PosPage(): JSX.Element {
                 align: 'right',
                 sortable: true,
                 sortValue: (i) => Number(i.grandTotal),
-                render: (i) => `$${Number(i.grandTotal).toFixed(2)}`,
+                render: (i) => `${cur}${Number(i.grandTotal).toFixed(2)}`,
               },
               {
                 key: 'createdAt',

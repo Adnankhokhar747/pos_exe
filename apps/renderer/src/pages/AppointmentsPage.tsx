@@ -272,6 +272,8 @@ export function AppointmentsPage(): JSX.Element {
       setAdvancePatientId(null);
       queryClient.invalidateQueries({ queryKey: ['patients-active'] });
       queryClient.invalidateQueries({ queryKey: ['patient-balance', advancePatientId] });
+      queryClient.invalidateQueries({ queryKey: ['patients-pos-lookup'] });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not record advance.'),
   });
@@ -438,6 +440,7 @@ export function AppointmentsPage(): JSX.Element {
       queryClient.invalidateQueries({ queryKey: ['hospital-appointments'] });
       queryClient.invalidateQueries({ queryKey: ['patients-active'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['patients-pos-lookup'] });
     },
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not finalize bill.'),
   });

@@ -174,6 +174,7 @@ export interface PurchaseOrder {
   id: string;
   orderNo: string;
   supplierId: string;
+  supplier?: { id: string; name: string };
   warehouseId: string;
   status: string;
   voidReason: string | null;
@@ -181,6 +182,18 @@ export interface PurchaseOrder {
   voidedAt: string | null;
   createdAt: string;
   lines: PurchaseOrderLine[];
+  paymentsSumAmount?: string | null;
+  goodsReceipts?: Array<{
+    id: string;
+    receiptNo: string;
+    supplierInvoices?: Array<{
+      id: string;
+      invoiceNo: string;
+      amount: string;
+      amountPaid: string;
+      status: string;
+    }>;
+  }>;
 }
 
 export interface GoodsReceiptLine {
@@ -197,6 +210,7 @@ export interface GoodsReceipt {
   receiptNo: string;
   warehouseId: string;
   purchaseOrderId: string | null;
+  purchaseOrder?: { id: string; orderNo: string } | null;
   status: string;
   voidReason: string | null;
   voidedBy: string | null;
@@ -209,6 +223,13 @@ export interface SupplierInvoice {
   id: string;
   invoiceNo: string;
   supplierId: string;
+  supplier?: { id: string; name: string };
+  goodsReceiptId?: string | null;
+  goodsReceipt?: {
+    id: string;
+    receiptNo: string;
+    purchaseOrder?: { id: string; orderNo: string } | null;
+  } | null;
   amount: string;
   amountPaid: string;
   status: string;
@@ -222,6 +243,20 @@ export interface SupplierInvoice {
 export interface SupplierPayment {
   id: string;
   supplierId: string;
+  purchaseOrderId?: string | null;
+  purchaseOrder?: { id: string; orderNo: string } | null;
+  supplier?: { id: string; name: string } | null;
+  allocations?: Array<{
+    supplierInvoiceId: string;
+    supplierInvoice?: {
+      id: string;
+      invoiceNo: string;
+      goodsReceiptId?: string | null;
+      goodsReceipt?: {
+        purchaseOrder?: { id: string; orderNo: string } | null;
+      } | null;
+    } | null;
+  }>;
   amount: string;
   method: string;
   voidReason: string | null;

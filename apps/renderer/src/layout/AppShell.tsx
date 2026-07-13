@@ -51,24 +51,24 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'Catalog & Stock',
     items: [
-      { path: '/catalog', label: 'Catalog', icon: <CategoryIcon />, requiredPermission: 'product.write' },
-      { path: '/inventory', label: 'Inventory', icon: <InventoryIcon />, requiredPermission: 'stock.adjust' },
-      { path: '/promotions', label: 'Promotions', icon: <LocalOfferIcon />, requiredPermission: 'settings.write' },
+      { path: '/catalog', label: 'Catalog', icon: <CategoryIcon />, requiredPermission: 'product.manage' },
+      { path: '/inventory', label: 'Inventory', icon: <InventoryIcon />, requiredPermission: 'inventory.adjust' },
+      { path: '/promotions', label: 'Promotions', icon: <LocalOfferIcon />, requiredPermission: 'settings.manage' },
     ],
   },
   {
     label: 'Partners & Buying',
     items: [
-      { path: '/customers', label: 'Customers', icon: <PeopleIcon />, requiredPermission: 'customer.write' },
-      { path: '/suppliers', label: 'Suppliers', icon: <LocalShippingIcon />, requiredPermission: 'supplier.write' },
-      { path: '/purchasing', label: 'Purchasing', icon: <ShoppingCartIcon />, requiredPermission: 'purchase.create' },
+      { path: '/customers', label: 'Customers', icon: <PeopleIcon />, requiredPermission: 'customer.manage' },
+      { path: '/suppliers', label: 'Suppliers', icon: <LocalShippingIcon />, requiredPermission: 'supplier.manage' },
+      { path: '/purchasing', label: 'Purchasing', icon: <ShoppingCartIcon />, requiredPermission: 'purchase.manage' },
     ],
   },
   {
     label: 'Insights',
     items: [
-      { path: '/reports', label: 'Reports', icon: <AssessmentIcon />, requiredPermission: 'report.financial.view' },
-      { path: '/accounting', label: 'Accounting', icon: <AccountBalanceIcon />, requiredPermission: 'accounting.write' },
+      { path: '/reports', label: 'Reports', icon: <AssessmentIcon />, requiredPermission: 'report.view' },
+      { path: '/accounting', label: 'Accounting', icon: <AccountBalanceIcon />, requiredPermission: 'expense.manage' },
     ],
   },
   {

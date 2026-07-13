@@ -66,7 +66,7 @@ export function App(): JSX.Element {
       <Route
         path="/customers"
         element={
-          <RequireAuth permission="customer.write">
+          <RequireAuth permission="customer.manage">
             <CustomersPage />
           </RequireAuth>
         }
@@ -74,7 +74,7 @@ export function App(): JSX.Element {
       <Route
         path="/suppliers"
         element={
-          <RequireAuth permission="supplier.write">
+          <RequireAuth permission="supplier.manage">
             <SuppliersPage />
           </RequireAuth>
         }
@@ -82,7 +82,7 @@ export function App(): JSX.Element {
       <Route
         path="/purchasing"
         element={
-          <RequireAuth permission="purchase.create">
+          <RequireAuth permission="purchase.manage">
             <PurchasingPage />
           </RequireAuth>
         }
@@ -90,7 +90,7 @@ export function App(): JSX.Element {
       <Route
         path="/inventory"
         element={
-          <RequireAuth permission="stock.adjust">
+          <RequireAuth permission="inventory.adjust">
             <InventoryPage />
           </RequireAuth>
         }
@@ -98,7 +98,7 @@ export function App(): JSX.Element {
       <Route
         path="/reports"
         element={
-          <RequireAuth permission="report.financial.view">
+          <RequireAuth permission="report.view">
             <ReportsPage />
           </RequireAuth>
         }
@@ -106,7 +106,7 @@ export function App(): JSX.Element {
       <Route
         path="/accounting"
         element={
-          <RequireAuth permission="accounting.write">
+          <RequireAuth permission="expense.manage">
             <AccountingPage />
           </RequireAuth>
         }
@@ -114,7 +114,7 @@ export function App(): JSX.Element {
       <Route
         path="/catalog"
         element={
-          <RequireAuth permission="product.write">
+          <RequireAuth permission="product.manage">
             <CatalogPage />
           </RequireAuth>
         }
@@ -122,7 +122,7 @@ export function App(): JSX.Element {
       <Route
         path="/promotions"
         element={
-          <RequireAuth permission="settings.write">
+          <RequireAuth permission="settings.manage">
             <PromotionsPage />
           </RequireAuth>
         }

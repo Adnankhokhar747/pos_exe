@@ -3,7 +3,14 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   IconButton,
+  InputAdornment,
   MenuItem,
   Snackbar,
   Stack,
@@ -46,21 +53,44 @@ export function PurchasingPage(): JSX.Element {
   const [tab, setTab] = useState(0);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
+  const POLL = 15_000; // 15-second background refresh for all purchasing data
+
   const suppliersQuery = useQuery({
     queryKey: ['suppliers-lookup'],
     queryFn: () => apiFetch<Supplier[]>('/api/v1/suppliers'),
+    refetchInterval: POLL,
   });
   const productsQuery = useQuery({
     queryKey: ['pos-grid', ''],
     queryFn: () => apiFetch<ProductWithStock[]>(`/api/v1/products/pos-grid?warehouseId=${ACTIVE_WAREHOUSE_ID}`),
+    refetchInterval: POLL,
   });
 
   // --- Purchase Orders ---
   const [poSupplier, setPoSupplier] = useState<Supplier | null>(null);
   const [poLines, setPoLines] = useState<LineDraft[]>([]);
+  const [payingPo, setPayingPo] = useState<PurchaseOrder | null>(null);
+  const [poPayForm, setPoPayForm] = useState({ amount: '', method: 'cash' });
+  const payPoMutation = useMutation({
+    mutationFn: ({ id, amount, method }: { id: string; amount: string; method: string }) =>
+      apiFetch(`/api/v1/purchase-orders/${id}/pay`, {
+        method: 'POST',
+        body: JSON.stringify({ amount: parseFloat(amount), method }),
+      }),
+    onSuccess: () => {
+      setSnackbar('Advance payment recorded.');
+      setPayingPo(null);
+      setPoPayForm({ amount: '', method: 'cash' });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    },
+    onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not record payment.'),
+  });
   const purchaseOrdersQuery = useQuery({
     queryKey: ['purchase-orders'],
     queryFn: () => apiFetch<PurchaseOrder[]>('/api/v1/purchase-orders'),
+    refetchInterval: POLL,
   });
   const createPoMutation = useMutation({
     mutationFn: () =>
@@ -95,6 +125,7 @@ export function PurchasingPage(): JSX.Element {
   const goodsReceiptsQuery = useQuery({
     queryKey: ['goods-receipts'],
     queryFn: () => apiFetch<GoodsReceipt[]>(`/api/v1/goods-receipts?warehouseId=${ACTIVE_WAREHOUSE_ID}`),
+    refetchInterval: POLL,
   });
   const createGrMutation = useMutation({
     mutationFn: () =>
@@ -121,6 +152,8 @@ export function PurchasingPage(): JSX.Element {
       setGrPoId('');
       queryClient.invalidateQueries({ queryKey: ['goods-receipts'] });
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-payments'] });
     },
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not post goods receipt.'),
   });
@@ -131,6 +164,7 @@ export function PurchasingPage(): JSX.Element {
   const supplierInvoicesQuery = useQuery({
     queryKey: ['supplier-invoices'],
     queryFn: () => apiFetch<SupplierInvoice[]>('/api/v1/supplier-invoices'),
+    refetchInterval: POLL,
   });
   const createSiMutation = useMutation({
     mutationFn: () =>
@@ -153,12 +187,34 @@ export function PurchasingPage(): JSX.Element {
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not record invoice.'),
   });
 
+  // --- Invoice Payment Dialog ---
+  const [payingInvoice, setPayingInvoice] = useState<SupplierInvoice | null>(null);
+  const [payForm, setPayForm] = useState({ amount: '', method: 'cash' });
+  const payInvoiceMutation = useMutation({
+    mutationFn: ({ id, amount, method }: { id: string; amount: string; method: string }) =>
+      apiFetch(`/api/v1/supplier-invoices/${id}/pay`, {
+        method: 'POST',
+        body: JSON.stringify({ amount: parseFloat(amount), method }),
+      }),
+    onSuccess: () => {
+      setSnackbar('Payment recorded successfully.');
+      setPayingInvoice(null);
+      setPayForm({ amount: '', method: 'cash' });
+      queryClient.invalidateQueries({ queryKey: ['supplier-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['supplier-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['suppliers'] });
+    },
+    onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not record payment.'),
+  });
+
   // --- Supplier Payments ---
   const [spSupplier, setSpSupplier] = useState<Supplier | null>(null);
   const [spAmount, setSpAmount] = useState('');
   const supplierPaymentsQuery = useQuery({
     queryKey: ['supplier-payments'],
     queryFn: () => apiFetch<SupplierPayment[]>('/api/v1/supplier-payments'),
+    refetchInterval: POLL,
   });
   const createSpMutation = useMutation({
     mutationFn: () =>
@@ -167,11 +223,12 @@ export function PurchasingPage(): JSX.Element {
         body: JSON.stringify({ supplierId: spSupplier?.id, amount: spAmount }),
       }),
     onSuccess: () => {
-      setSnackbar('Payment recorded — allocated FIFO against open invoices.');
+      setSnackbar('Payment recorded.');
       setSpAmount('');
       setSpSupplier(null);
       queryClient.invalidateQueries({ queryKey: ['supplier-payments'] });
       queryClient.invalidateQueries({ queryKey: ['supplier-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
       queryClient.invalidateQueries({ queryKey: ['suppliers'] });
     },
     onError: (error) => setSnackbar(error instanceof ApiError ? error.detail : 'Could not record payment.'),
@@ -221,6 +278,8 @@ export function PurchasingPage(): JSX.Element {
                   sx={{ width: 260 }}
                   options={productsQuery.data ?? []}
                   getOptionLabel={(o) => o.name}
+                  value={product ?? null}
+                  isOptionEqualToValue={(o, v) => o.id === v.id}
                   onChange={(_, value) =>
                     setLines((current) =>
                       current.map((l, i) => (i === idx ? { ...l, productId: value?.id ?? '', productName: value?.name ?? '' } : l)),
@@ -337,38 +396,197 @@ export function PurchasingPage(): JSX.Element {
             emptyMessage="No purchase orders yet."
             getRowId={(po: PurchaseOrder) => po.id}
             rows={purchaseOrdersQuery.data ?? []}
-            getSearchText={(po) => `${po.orderNo} ${po.status}`}
+            getSearchText={(po) => `${po.orderNo} ${po.status} ${po.supplier?.name ?? ''}`}
             columns={[
               { key: 'orderNo', label: 'Order No', sortable: true, render: (po) => po.orderNo },
-              { key: 'status', label: 'Status', sortable: true, render: (po) => formatEnumLabel(po.status) },
+              { key: 'supplier', label: 'Supplier', sortable: true, render: (po) => po.supplier?.name ?? '—' },
+              {
+                key: 'orderTotal',
+                label: 'PO Total',
+                align: 'right',
+                sortable: true,
+                sortValue: (po) => po.lines.reduce((s, l) => s + Number(l.unitCost) * Number(l.quantityOrdered), 0),
+                render: (po) => `$${po.lines.reduce((s, l) => s + Number(l.unitCost) * Number(l.quantityOrdered), 0).toFixed(2)}`,
+              },
+              {
+                key: 'amountPaid',
+                label: 'Paid',
+                align: 'right',
+                render: (po) => {
+                  // After receipt → use invoice amount_paid; before receipt → use advance payments
+                  const invoices = (po.goodsReceipts ?? []).flatMap((gr) => gr.supplierInvoices ?? []);
+                  const paid = invoices.length > 0
+                    ? invoices.reduce((s, inv) => s + Number(inv.amountPaid), 0)
+                    : Number(po.paymentsSumAmount ?? 0);
+                  return paid > 0
+                    ? <Typography variant="body2" color="success.main" fontWeight={600}>${paid.toFixed(2)}</Typography>
+                    : <Typography variant="body2" color="text.disabled">$0.00</Typography>;
+                },
+              },
+              {
+                key: 'payStatus',
+                label: 'Pay Status',
+                render: (po) => {
+                  const total = po.lines.reduce((s, l) => s + Number(l.unitCost) * Number(l.quantityOrdered), 0);
+                  if (total === 0) return null;
+                  const invoices = (po.goodsReceipts ?? []).flatMap((gr) => gr.supplierInvoices ?? []);
+                  if (invoices.length > 0) {
+                    // Status comes from invoice
+                    const inv = invoices[0]!;
+                    const colorMap: Record<string, 'success' | 'warning' | 'error' | 'default'> = {
+                      paid: 'success', partially_paid: 'warning', unpaid: 'error',
+                    };
+                    return <Chip size="small" label={`${formatEnumLabel(inv.status)} (${inv.invoiceNo})`} color={colorMap[inv.status] ?? 'default'} />;
+                  }
+                  // Pre-receipt: advance status
+                  const advance = Number(po.paymentsSumAmount ?? 0);
+                  if (advance >= total) return <Chip size="small" label="Advance: Fully Paid" color="success" />;
+                  if (advance > 0) return <Chip size="small" label={`Advance: $${advance.toFixed(2)}`} color="warning" />;
+                  return <Chip size="small" label="Unpaid" color="error" />;
+                },
+              },
+              {
+                key: 'grRef',
+                label: 'GR / Invoice',
+                render: (po) => {
+                  const grs = po.goodsReceipts ?? [];
+                  if (grs.length === 0) return <Typography variant="body2" color="text.disabled">—</Typography>;
+                  return (
+                    <Stack spacing={0.25}>
+                      {grs.map((gr) => (
+                        <Typography key={gr.id} variant="caption" color="text.secondary">
+                          {gr.receiptNo}{(gr.supplierInvoices ?? []).map((si) => ` → ${si.invoiceNo}`).join('')}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  );
+                },
+              },
               {
                 key: 'received',
                 label: 'Received',
                 render: (po) => {
-                  const ordered = po.lines.reduce((sum, l) => sum + Number(l.quantityOrdered), 0);
-                  const received = po.lines.reduce((sum, l) => sum + Number(l.quantityReceived), 0);
+                  const ordered   = po.lines.reduce((s, l) => s + Number(l.quantityOrdered), 0);
+                  const received  = po.lines.reduce((s, l) => s + Number(l.quantityReceived), 0);
                   return `${received} / ${ordered} units`;
                 },
               },
+              { key: 'status', label: 'PO Status', sortable: true, render: (po) => formatEnumLabel(po.status) },
               {
-                key: 'createdAt',
-                label: 'Created',
-                sortable: true,
+                key: 'createdAt', label: 'Created', sortable: true,
                 sortValue: (po) => new Date(po.createdAt).getTime(),
                 render: (po) => new Date(po.createdAt).toLocaleString(),
               },
               {
                 key: 'actions',
                 label: '',
-                render: (po) =>
-                  po.status === 'draft' ? (
-                    <Button size="small" onClick={() => sendPoMutation.mutate(po.id)}>
-                      Send
-                    </Button>
-                  ) : null,
+                render: (po) => {
+                  const total     = po.lines.reduce((s, l) => s + Number(l.unitCost) * Number(l.quantityOrdered), 0);
+                  const invoices  = (po.goodsReceipts ?? []).flatMap((gr) => gr.supplierInvoices ?? []);
+                  const invPaid   = invoices.reduce((s, inv) => s + Number(inv.amountPaid), 0);
+                  const advance   = Number(po.paymentsSumAmount ?? 0);
+                  const isInvoiced = invoices.length > 0;
+                  const isFullyPaid = isInvoiced ? invPaid >= total : advance >= total;
+
+                  return (
+                    <Stack direction="row" spacing={0.5}>
+                      {po.status === 'draft' && (
+                        <Button size="small" onClick={() => sendPoMutation.mutate(po.id)}>Send</Button>
+                      )}
+                      {po.status !== 'voided' && !isFullyPaid && !isInvoiced && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => {
+                            const remaining = Math.max(0, total - advance);
+                            setPayingPo(po);
+                            setPoPayForm({ amount: remaining.toFixed(2), method: 'cash' });
+                          }}
+                        >
+                          Pay Advance
+                        </Button>
+                      )}
+                      {isInvoiced && !isFullyPaid && (
+                        <Button size="small" variant="outlined" color="warning" onClick={() => setTab(2)}>
+                          Pay Invoice
+                        </Button>
+                      )}
+                    </Stack>
+                  );
+                },
               },
             ]}
           />
+
+          {/* PO Advance Payment Dialog */}
+          <Dialog open={Boolean(payingPo)} onClose={() => setPayingPo(null)} maxWidth="xs" fullWidth>
+            <DialogTitle>Advance Payment — {payingPo?.orderNo}</DialogTitle>
+            <DialogContent>
+              {payingPo && (() => {
+                const total     = payingPo.lines.reduce((s, l) => s + Number(l.unitCost) * Number(l.quantityOrdered), 0);
+                const advance   = Number(payingPo.paymentsSumAmount ?? 0);
+                const remaining = Math.max(0, total - advance);
+                return (
+                  <Stack spacing={2} mt={1}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">Supplier</Typography>
+                      <Typography variant="body1" fontWeight={600}>{payingPo.supplier?.name ?? '—'}</Typography>
+                    </Box>
+                    <Divider />
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">PO Total</Typography>
+                      <Typography variant="body2">${total.toFixed(2)}</Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">Advances Already Paid</Typography>
+                      <Typography variant="body2" color="success.main">${advance.toFixed(2)}</Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color="text.secondary">Remaining</Typography>
+                      <Typography variant="body2" fontWeight={700} color={remaining > 0 ? 'error.main' : 'text.secondary'}>
+                        ${remaining.toFixed(2)}
+                      </Typography>
+                    </Stack>
+                    <Divider />
+                    <TextField
+                      label="Payment Amount"
+                      type="number"
+                      value={poPayForm.amount}
+                      onChange={(e) => setPoPayForm({ ...poPayForm, amount: e.target.value })}
+                      InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                      inputProps={{ min: 0.01, step: '0.01' }}
+                      helperText="Advance payment — automatically applied to the invoice when goods are received"
+                      fullWidth
+                    />
+                    <TextField
+                      select
+                      label="Payment Method"
+                      value={poPayForm.method}
+                      onChange={(e) => setPoPayForm({ ...poPayForm, method: e.target.value })}
+                      fullWidth
+                    >
+                      <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+                      <MenuItem value="cheque">Cheque</MenuItem>
+                      <MenuItem value="card">Card</MenuItem>
+                    </TextField>
+                  </Stack>
+                );
+              })()}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setPayingPo(null)}>Cancel</Button>
+              <Button
+                variant="contained"
+                disabled={!poPayForm.amount || parseFloat(poPayForm.amount) <= 0 || payPoMutation.isPending}
+                onClick={() =>
+                  payingPo && payPoMutation.mutate({ id: payingPo.id, amount: poPayForm.amount, method: poPayForm.method })
+                }
+              >
+                {payPoMutation.isPending ? 'Recording…' : 'Record Payment'}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       )}
 
@@ -409,9 +627,21 @@ export function PurchasingPage(): JSX.Element {
             emptyMessage="No goods receipts yet."
             getRowId={(gr: GoodsReceipt) => gr.id}
             rows={goodsReceiptsQuery.data ?? []}
-            getSearchText={(gr) => `${gr.receiptNo} ${gr.status}`}
+            getSearchText={(gr) => `${gr.receiptNo} ${gr.status} ${gr.purchaseOrder?.orderNo ?? ''}`}
             columns={[
               { key: 'receiptNo', label: 'Receipt No', sortable: true, render: (gr) => gr.receiptNo },
+              {
+                key: 'poRef',
+                label: 'PO Ref',
+                render: (gr) =>
+                  gr.purchaseOrder?.orderNo ? (
+                    <Typography variant="body2" fontWeight={600} color="primary.main">
+                      {gr.purchaseOrder.orderNo}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled">No PO</Typography>
+                  ),
+              },
               { key: 'status', label: 'Status', sortable: true, render: (gr) => formatEnumLabel(gr.status) },
               {
                 key: 'lines',
@@ -470,12 +700,40 @@ export function PurchasingPage(): JSX.Element {
             emptyMessage="No supplier invoices yet."
             getRowId={(inv: SupplierInvoice) => inv.id}
             rows={supplierInvoicesQuery.data ?? []}
-            getSearchText={(inv) => `${inv.invoiceNo} ${inv.status}`}
+            getSearchText={(inv) => `${inv.invoiceNo} ${inv.status} ${inv.supplier?.name ?? ''} ${inv.goodsReceipt?.receiptNo ?? ''} ${inv.goodsReceipt?.purchaseOrder?.orderNo ?? ''}`}
             columns={[
               { key: 'invoiceNo', label: 'Invoice No', sortable: true, render: (inv) => inv.invoiceNo },
               {
+                key: 'supplier',
+                label: 'Supplier',
+                sortable: true,
+                render: (inv) => inv.supplier?.name ?? '—',
+              },
+              {
+                key: 'poRef',
+                label: 'PO Ref',
+                render: (inv) =>
+                  inv.goodsReceipt?.purchaseOrder?.orderNo ? (
+                    <Typography variant="body2" fontWeight={600} color="primary.main">
+                      {inv.goodsReceipt.purchaseOrder.orderNo}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled">Manual</Typography>
+                  ),
+              },
+              {
+                key: 'grRef',
+                label: 'GR Ref',
+                render: (inv) =>
+                  inv.goodsReceipt?.receiptNo ? (
+                    <Typography variant="body2" color="text.secondary">{inv.goodsReceipt.receiptNo}</Typography>
+                  ) : (
+                    <Typography variant="body2" color="text.disabled">—</Typography>
+                  ),
+              },
+              {
                 key: 'amount',
-                label: 'Amount',
+                label: 'Total',
                 align: 'right',
                 sortable: true,
                 sortValue: (inv) => Number(inv.amount),
@@ -489,9 +747,142 @@ export function PurchasingPage(): JSX.Element {
                 sortValue: (inv) => Number(inv.amountPaid),
                 render: (inv) => `$${Number(inv.amountPaid).toFixed(2)}`,
               },
-              { key: 'status', label: 'Status', sortable: true, render: (inv) => formatEnumLabel(inv.status) },
+              {
+                key: 'outstanding',
+                label: 'Outstanding',
+                align: 'right',
+                sortable: true,
+                sortValue: (inv) => Number(inv.amount) - Number(inv.amountPaid),
+                render: (inv) => {
+                  const outstanding = Number(inv.amount) - Number(inv.amountPaid);
+                  return (
+                    <Typography
+                      variant="body2"
+                      color={outstanding > 0 ? 'error.main' : 'text.secondary'}
+                      fontWeight={outstanding > 0 ? 600 : 400}
+                    >
+                      ${outstanding.toFixed(2)}
+                    </Typography>
+                  );
+                },
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                sortable: true,
+                render: (inv) => {
+                  const colorMap: Record<string, 'error' | 'warning' | 'success' | 'default'> = {
+                    unpaid: 'error',
+                    partially_paid: 'warning',
+                    paid: 'success',
+                  };
+                  return (
+                    <Chip
+                      size="small"
+                      label={formatEnumLabel(inv.status)}
+                      color={colorMap[inv.status] ?? 'default'}
+                    />
+                  );
+                },
+              },
+              {
+                key: 'actions',
+                label: '',
+                render: (inv) =>
+                  inv.status !== 'paid' && inv.status !== 'voided' ? (
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        const outstanding = (Number(inv.amount) - Number(inv.amountPaid)).toFixed(2);
+                        setPayingInvoice(inv);
+                        setPayForm({ amount: outstanding, method: 'cash' });
+                      }}
+                    >
+                      Pay
+                    </Button>
+                  ) : null,
+              },
             ]}
           />
+
+          {/* Payment Dialog */}
+          <Dialog
+            open={Boolean(payingInvoice)}
+            onClose={() => setPayingInvoice(null)}
+            maxWidth="xs"
+            fullWidth
+          >
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogContent>
+              {payingInvoice && (
+                <Stack spacing={2} mt={1}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Invoice</Typography>
+                    <Typography variant="body1" fontWeight={600}>{payingInvoice.invoiceNo}</Typography>
+                    {payingInvoice.supplier && (
+                      <Typography variant="body2" color="text.secondary">{payingInvoice.supplier.name}</Typography>
+                    )}
+                  </Box>
+                  <Divider />
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">Invoice Total</Typography>
+                    <Typography variant="body2">${Number(payingInvoice.amount).toFixed(2)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">Already Paid</Typography>
+                    <Typography variant="body2">${Number(payingInvoice.amountPaid).toFixed(2)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">Outstanding</Typography>
+                    <Typography variant="body2" fontWeight={700} color="error.main">
+                      ${(Number(payingInvoice.amount) - Number(payingInvoice.amountPaid)).toFixed(2)}
+                    </Typography>
+                  </Stack>
+                  <Divider />
+                  <TextField
+                    label="Payment Amount"
+                    type="number"
+                    value={payForm.amount}
+                    onChange={(e) => setPayForm({ ...payForm, amount: e.target.value })}
+                    InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+                    inputProps={{ min: 0.01, step: '0.01', max: Number(payingInvoice.amount) - Number(payingInvoice.amountPaid) }}
+                    helperText="Enter a partial amount to record a partial payment"
+                    fullWidth
+                  />
+                  <TextField
+                    select
+                    label="Payment Method"
+                    value={payForm.method}
+                    onChange={(e) => setPayForm({ ...payForm, method: e.target.value })}
+                    fullWidth
+                  >
+                    <MenuItem value="cash">Cash</MenuItem>
+                    <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+                    <MenuItem value="cheque">Cheque</MenuItem>
+                    <MenuItem value="card">Card</MenuItem>
+                  </TextField>
+                </Stack>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setPayingInvoice(null)}>Cancel</Button>
+              <Button
+                variant="contained"
+                disabled={!payForm.amount || parseFloat(payForm.amount) <= 0 || payInvoiceMutation.isPending}
+                onClick={() =>
+                  payingInvoice &&
+                  payInvoiceMutation.mutate({
+                    id: payingInvoice.id,
+                    amount: payForm.amount,
+                    method: payForm.method,
+                  })
+                }
+              >
+                {payInvoiceMutation.isPending ? 'Recording…' : 'Record Payment'}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       )}
 
@@ -522,7 +913,7 @@ export function PurchasingPage(): JSX.Element {
             emptyMessage="No supplier payments yet."
             getRowId={(p: SupplierPayment) => p.id}
             rows={supplierPaymentsQuery.data ?? []}
-            getSearchText={(p) => `${p.method}`}
+            getSearchText={(p) => `${p.method} ${p.supplier?.name ?? ''} ${p.purchaseOrder?.orderNo ?? ''} ${(p.allocations ?? []).map((a) => a.supplierInvoice?.invoiceNo ?? '').join(' ')}`}
             columns={[
               {
                 key: 'paidAt',
@@ -531,6 +922,50 @@ export function PurchasingPage(): JSX.Element {
                 sortValue: (p) => new Date(p.paidAt).getTime(),
                 render: (p) => new Date(p.paidAt).toLocaleString(),
               },
+              {
+                key: 'supplier',
+                label: 'Supplier',
+                sortable: true,
+                render: (p) => p.supplier?.name ?? '—',
+              },
+              {
+                key: 'reference',
+                label: 'PO / Invoice Reference',
+                render: (p) => {
+                  // Collect all PO numbers: direct (advance) + through invoice chain
+                  const poNos = new Set<string>();
+                  const invNos = new Set<string>();
+
+                  if (p.purchaseOrder?.orderNo) poNos.add(p.purchaseOrder.orderNo);
+
+                  for (const alloc of p.allocations ?? []) {
+                    if (alloc.supplierInvoice?.invoiceNo) invNos.add(alloc.supplierInvoice.invoiceNo);
+                    const chainPo = alloc.supplierInvoice?.goodsReceipt?.purchaseOrder?.orderNo;
+                    if (chainPo) poNos.add(chainPo);
+                  }
+
+                  if (poNos.size === 0 && invNos.size === 0) {
+                    return <Typography variant="body2" color="text.disabled">No Reference</Typography>;
+                  }
+
+                  return (
+                    <Stack spacing={0.5}>
+                      {[...poNos].map((no) => (
+                        <Stack key={no} direction="row" spacing={0.5} alignItems="center">
+                          <Chip size="small" label={no} color="info" />
+                          <Typography variant="caption" color="text.secondary">PO</Typography>
+                        </Stack>
+                      ))}
+                      {[...invNos].map((no) => (
+                        <Stack key={no} direction="row" spacing={0.5} alignItems="center">
+                          <Chip size="small" label={no} color="primary" />
+                          <Typography variant="caption" color="text.secondary">Invoice</Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  );
+                },
+              },
               { key: 'method', label: 'Method', sortable: true, render: (p) => formatEnumLabel(p.method) },
               {
                 key: 'amount',
@@ -538,7 +973,11 @@ export function PurchasingPage(): JSX.Element {
                 align: 'right',
                 sortable: true,
                 sortValue: (p) => Number(p.amount),
-                render: (p) => `$${Number(p.amount).toFixed(2)}`,
+                render: (p) => (
+                  <Typography variant="body2" fontWeight={600} color="success.main">
+                    ${Number(p.amount).toFixed(2)}
+                  </Typography>
+                ),
               },
             ]}
           />
