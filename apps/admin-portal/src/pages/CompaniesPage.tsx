@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Box, Chip, MenuItem, Snackbar, Stack, TextField, Typography } from '@mui/material';
+import { Box, Chip, CircularProgress, MenuItem, Snackbar, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, ApiError } from '../api/client';
-import type { CompanySummary, Plan } from '../api/types';
+import type { BackupSnapshotMeta, CompanyBackupStatus, CompanySummary, Plan } from '../api/types';
 import { DataTable } from '../components/DataTable';
 import { AppModal } from '../components/AppModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -111,6 +111,8 @@ export function CompaniesPage(): JSX.Element {
   });
 
   const [planChangeTarget, setPlanChangeTarget] = useState<CompanySummary | null>(null);
+
+  const [backupTarget, setBackupTarget] = useState<CompanySummary | null>(null);
   const [newPlanId, setNewPlanId] = useState('');
   const changePlanMutation = useMutation({
     mutationFn: () =>
@@ -209,6 +211,9 @@ export function CompaniesPage(): JSX.Element {
                 </SecondaryButton>
                 <SecondaryButton size="small" onClick={() => navigate(`/modules?companyId=${c.id}`)}>
                   Modules
+                </SecondaryButton>
+                <SecondaryButton size="small" onClick={() => setBackupTarget(c)}>
+                  Backup
                 </SecondaryButton>
                 <SecondaryButton size="small" color="error" onClick={() => setDeleteTarget(c)}>
                   Delete
@@ -353,7 +358,171 @@ export function CompaniesPage(): JSX.Element {
         onCancel={() => setDeleteTarget(null)}
       />
 
+      {backupTarget && (
+        <CompanyBackupModal
+          company={backupTarget}
+          onClose={() => setBackupTarget(null)}
+          setSnackbar={setSnackbar}
+        />
+      )}
+
       <Snackbar open={Boolean(snackbar)} autoHideDuration={3000} onClose={() => setSnackbar(null)} message={snackbar} />
     </Box>
+  );
+}
+
+// ─── Company Backup Modal ──────────────────────────────────────────────────────
+
+function fmtBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+function CompanyBackupModal({
+  company,
+  onClose,
+  setSnackbar,
+}: {
+  company: CompanySummary;
+  onClose: () => void;
+  setSnackbar: (msg: string) => void;
+}): JSX.Element {
+  const queryClient = useQueryClient();
+
+  const statusQuery = useQuery({
+    queryKey: ['company-backup-status', company.id],
+    queryFn: () => apiFetch<CompanyBackupStatus>(`/api/v1/platform/companies/${company.id}/backup`),
+  });
+
+  const snapshotsQuery = useQuery({
+    queryKey: ['company-backup-snapshots', company.id],
+    queryFn: () => apiFetch<BackupSnapshotMeta[]>(`/api/v1/platform/companies/${company.id}/backup/snapshots`),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (enabled: boolean) =>
+      apiFetch(`/api/v1/platform/companies/${company.id}/backup`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-backup-status', company.id] });
+      setSnackbar('Backup settings updated.');
+    },
+    onError: (e) => setSnackbar(e instanceof ApiError ? e.detail : 'Update failed.'),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      apiFetch(`/api/v1/platform/companies/${company.id}/backup/create`, { method: 'POST', body: JSON.stringify({}) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-backup-status', company.id] });
+      queryClient.invalidateQueries({ queryKey: ['company-backup-snapshots', company.id] });
+      setSnackbar('Backup created.');
+    },
+    onError: (e) => setSnackbar(e instanceof ApiError ? e.detail : 'Backup failed.'),
+  });
+
+  function handleDownload(snap: BackupSnapshotMeta): void {
+    const token = localStorage.getItem('vantage.platform.accessToken');
+    const base  = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
+    const url   = `${base}/api/v1/platform/companies/${company.id}/backup/snapshots/${snap.id}/download`;
+    fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const a    = document.createElement('a');
+        a.href     = URL.createObjectURL(blob);
+        a.download = `${company.name.replace(/\s+/g, '_')}-backup-v${snap.version}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      });
+  }
+
+  const status = statusQuery.data;
+
+  return (
+    <AppModal
+      open
+      onClose={onClose}
+      title={`Cloud Backup — ${company.name}`}
+      maxWidth="md"
+      fullWidth
+      actions={<SecondaryButton onClick={onClose}>Close</SecondaryButton>}
+    >
+      {statusQuery.isLoading ? (
+        <Box display="flex" justifyContent="center" py={3}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <Stack spacing={2}>
+          {/* Status header */}
+          <Stack direction="row" spacing={3} alignItems="center" flexWrap="wrap">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="body2">Cloud Backup Enabled</Typography>
+              <Switch
+                checked={status?.enabled ?? false}
+                disabled={toggleMutation.isPending}
+                onChange={(e) => toggleMutation.mutate(e.target.checked)}
+              />
+            </Stack>
+            <Box>
+              <Typography variant="caption" color="text.secondary">Last backed up</Typography>
+              <Typography variant="body2">
+                {status?.lastBackedUpAt ? new Date(status.lastBackedUpAt).toLocaleString() : 'Never'}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">Snapshots</Typography>
+              <Typography variant="body2">{status?.snapshotCount ?? 0} / {status?.maxSnapshots ?? 10}</Typography>
+            </Box>
+            <Stack>
+              <SecondaryButton size="small" disabled={createMutation.isPending} onClick={() => createMutation.mutate()}>
+                {createMutation.isPending ? 'Creating…' : 'Create Backup Now'}
+              </SecondaryButton>
+            </Stack>
+          </Stack>
+
+          {/* Snapshot list */}
+          <Typography variant="subtitle2">Snapshots</Typography>
+          {snapshotsQuery.isLoading ? (
+            <CircularProgress size={20} />
+          ) : (snapshotsQuery.data ?? []).length === 0 ? (
+            <Typography variant="body2" color="text.secondary">No snapshots yet.</Typography>
+          ) : (
+            <Stack spacing={1}>
+              {(snapshotsQuery.data ?? []).map((snap) => (
+                <Box
+                  key={snap.id}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  border={1}
+                  borderColor="divider"
+                  borderRadius={1}
+                  px={2}
+                  py={1}
+                >
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Chip label={`v${snap.version}`} size="small" />
+                    <Box>
+                      <Typography variant="body2">{snap.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(snap.createdAt).toLocaleString()} · {fmtBytes(snap.sizeBytes)}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <SecondaryButton size="small" onClick={() => handleDownload(snap)}>
+                    Download
+                  </SecondaryButton>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </Stack>
+      )}
+    </AppModal>
   );
 }

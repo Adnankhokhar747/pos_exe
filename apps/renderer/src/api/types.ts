@@ -53,7 +53,7 @@ export interface Role {
   id: string;
   name: string;
   isSystemRole: boolean;
-  rolePermissions: { permission: Permission }[];
+  permissions: Permission[];
 }
 
 export interface TenantUser {
@@ -63,7 +63,7 @@ export interface TenantUser {
   email: string | null;
   status: 'active' | 'inactive';
   createdAt: string;
-  userRoles: { role: Role }[];
+  roles: Role[];
 }
 
 export interface ProductWithStock {
@@ -673,4 +673,23 @@ export interface HospitalRevenueSummary {
   totalAdvanceCollected: string;
   totalRefunded: string;
   byDoctor: DoctorRevenueSummary[];
+}
+
+// ─── Cloud Backup ─────────────────────────────────────────────────────────────
+
+export interface BackupSnapshotMeta {
+  id: string;
+  version: number;
+  label: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface BackupStatus {
+  enabled: boolean;
+  autoBackup: boolean;
+  maxSnapshots: number;
+  lastBackedUpAt: string | null;
+  snapshotCount: number;
+  latestSnapshot: BackupSnapshotMeta | null;
 }

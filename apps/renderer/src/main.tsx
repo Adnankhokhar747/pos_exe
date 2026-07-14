@@ -21,7 +21,7 @@ function Root(): JSX.Element {
         <AuthProvider>
           <LicenseProvider>
             <ModulesProvider>
-              <BrowserRouter>
+              <BrowserRouter basename={import.meta.env.VITE_WEB_BASE ?? '/'}>
                 <App />
               </BrowserRouter>
             </ModulesProvider>

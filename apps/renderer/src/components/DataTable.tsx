@@ -72,14 +72,16 @@ export function DataTable<T>({
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
 
+  const safeRows = Array.isArray(rows) ? rows : [];
+
   const filteredRows = useMemo(() => {
-    if (!search.trim()) return rows;
+    if (!search.trim()) return safeRows;
     const needle = search.trim().toLowerCase();
-    return rows.filter((row) => {
+    return safeRows.filter((row) => {
       const text = getSearchText ? getSearchText(row) : JSON.stringify(row);
       return text.toLowerCase().includes(needle);
     });
-  }, [rows, search, getSearchText]);
+  }, [safeRows, search, getSearchText]);
 
   const sortedRows = useMemo(() => {
     if (!sortKey) return filteredRows;

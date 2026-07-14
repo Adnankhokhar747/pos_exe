@@ -22,7 +22,10 @@ const PG_DATABASE = 'vantage_branch';
 let instance: import('embedded-postgres').default | undefined;
 
 export function shouldManageOwnPostgres(): boolean {
-  return app.isPackaged;
+  if (!app.isPackaged) return false;
+  // PHP/cloud build ships a USE_LIVE_API marker file — skip embedded services
+  const marker = path.join(process.resourcesPath, 'USE_LIVE_API');
+  return !fs.existsSync(marker);
 }
 
 export function buildDatabaseUrl(): string {

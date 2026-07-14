@@ -1,6 +1,7 @@
-import { app, BrowserWindow, dialog, globalShortcut, Menu, net, protocol } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, net, protocol } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { autoUpdater } from 'electron-updater';
 import { startEmbeddedPostgres, stopEmbeddedPostgres, shouldManageOwnPostgres } from './postgres-lifecycle';
 import { startBranchApi, stopBranchApi } from './branch-api-process';
 import { registerPrintingIpcHandlers } from './printing';
@@ -12,6 +13,7 @@ const DEV_ADMIN_PORTAL_URL = 'http://localhost:5174';
 const APP_SCHEME = 'app';
 const ADMIN_SCHEME = 'adminportal';
 const ADMIN_PORTAL_SHORTCUT = 'CommandOrControl+Shift+A';
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // every 4 hours
 
 // Chromium's module-script loader (both the POS renderer and the admin portal
 // ship `<script type="module" crossorigin>`) enforces CORS-style rules that a
@@ -101,6 +103,40 @@ async function createWindow(): Promise<void> {
   }
 }
 
+function setupAutoUpdater(): void {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    log(`[updater] update available: ${info.version}`);
+    mainWindow?.webContents.send('update:available', { version: info.version, releaseNotes: info.releaseNotes ?? null });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    log(`[updater] update downloaded: ${info.version}`);
+    mainWindow?.webContents.send('update:downloaded', { version: info.version, releaseNotes: info.releaseNotes ?? null });
+  });
+
+  autoUpdater.on('error', (err) => {
+    log(`[updater] error: ${err.message}`);
+  });
+
+  const checkSafely = (): void => {
+    autoUpdater.checkForUpdates().catch((err: unknown) => {
+      log(`[updater] check failed: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  };
+
+  checkSafely();
+  setInterval(checkSafely, UPDATE_CHECK_INTERVAL_MS);
+}
+
+function registerUpdaterIpcHandlers(): void {
+  ipcMain.handle('update:install-now', () => {
+    autoUpdater.quitAndInstall(false, true);
+  });
+}
+
 async function bootstrap(): Promise<void> {
   // A cash-register terminal has no business exposing Reload/DevTools/Zoom to
   // whoever is standing at the till — Electron's default menu is a developer
@@ -146,7 +182,12 @@ async function bootstrap(): Promise<void> {
   globalShortcut.register(ADMIN_PORTAL_SHORTCUT, openAdminPortalWindow);
 
   registerPrintingIpcHandlers();
+  registerUpdaterIpcHandlers();
   await createWindow();
+
+  if (app.isPackaged) {
+    setupAutoUpdater();
+  }
 
   if (startupErrorDetail) {
     dialog.showErrorBox(

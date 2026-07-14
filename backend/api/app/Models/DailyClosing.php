@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class DailyClosing extends Model
 {
-    protected $table = 'daily_closings';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'daily_closings';
     public $timestamps = false;
 
     protected $fillable = [

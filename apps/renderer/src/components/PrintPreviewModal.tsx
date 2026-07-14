@@ -22,7 +22,7 @@ export function PrintPreviewModal({ open, title, html, onClose }: PrintPreviewMo
     setPrinters([]);
     setPrinterName('');
     if (!window.vantage) {
-      setError('Printing is only available in the desktop app.');
+      // Web mode — no printer list needed; browser dialog will be used
       return;
     }
     window.vantage.printing
@@ -35,9 +35,20 @@ export function PrintPreviewModal({ open, title, html, onClose }: PrintPreviewMo
       .catch(() => setError('Could not load printers.'));
   }, [open]);
 
+  function browserPrint(): void {
+    const win = window.open('', '_blank', 'width=800,height=600');
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.print();
+    win.close();
+    onClose();
+  }
+
   async function handlePrint(): Promise<void> {
     if (!window.vantage) {
-      setError('Printing is only available in the desktop app.');
+      browserPrint();
       return;
     }
     setBusy(true);
@@ -54,7 +65,7 @@ export function PrintPreviewModal({ open, title, html, onClose }: PrintPreviewMo
 
   async function handleSavePdf(): Promise<void> {
     if (!window.vantage) {
-      setError('Printing is only available in the desktop app.');
+      browserPrint();
       return;
     }
     setBusy(true);
@@ -82,7 +93,7 @@ export function PrintPreviewModal({ open, title, html, onClose }: PrintPreviewMo
           <SecondaryButton disabled={busy} onClick={handleSavePdf}>
             Save as PDF
           </SecondaryButton>
-          <PrimaryButton disabled={busy || !printerName} onClick={handlePrint}>
+          <PrimaryButton disabled={busy || (!window.vantage ? false : !printerName)} onClick={handlePrint}>
             Print
           </PrimaryButton>
         </>

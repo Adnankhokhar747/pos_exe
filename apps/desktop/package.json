@@ -10,6 +10,7 @@
     "lint": "eslint \"main/**/*.ts\" \"preload/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "package": "electron-builder --win",
+    "package:php": "electron-builder --config electron-builder.php.yml",
     "test": "echo \"no tests yet\""
   },
   "dependencies": {

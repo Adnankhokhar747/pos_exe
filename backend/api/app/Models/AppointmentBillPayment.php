@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class AppointmentBillPayment extends Model
 {
-    protected $table = 'appointment_bill_payments';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'appointment_bill_payments';
     public $timestamps = false;
 
     protected $fillable = ['id','bill_id','method','amount','reference'];

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -9,40 +9,45 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Enums as PostgreSQL types (idempotent — safe to re-run on migrate:fresh)
-        $enums = [
-            "CREATE TYPE tenant_status AS ENUM ('active','suspended')",
-            "CREATE TYPE tax_type AS ENUM ('vat','gst','sales_tax','custom')",
-            "CREATE TYPE invoice_status AS ENUM ('held','completed','voided')",
-            "CREATE TYPE invoice_type AS ENUM ('sale','return')",
-            "CREATE TYPE payment_method AS ENUM ('cash','debit_card','credit_card','bank_transfer','mobile_wallet','credit_sale','store_credit','gift_card','patient_advance')",
-            "CREATE TYPE stock_movement_type AS ENUM ('purchase_receipt','purchase_return','sale','sale_return','adjustment','transfer_out','transfer_in','opening_balance')",
-            "CREATE TYPE loyalty_transaction_type AS ENUM ('earn','redeem','adjustment')",
-            "CREATE TYPE coupon_discount_type AS ENUM ('percentage','fixed')",
-            "CREATE TYPE gift_card_transaction_type AS ENUM ('issue','redeem','reload')",
-            "CREATE TYPE customer_ledger_entry_type AS ENUM ('invoice','payment','return','opening_balance')",
-            "CREATE TYPE supplier_ledger_entry_type AS ENUM ('purchase_invoice','payment','return','opening_balance','void_reversal')",
-            "CREATE TYPE purchase_order_status AS ENUM ('draft','sent','partially_received','received','cancelled')",
-            "CREATE TYPE goods_receipt_status AS ENUM ('draft','posted','voided')",
-            "CREATE TYPE supplier_invoice_status AS ENUM ('unpaid','partially_paid','paid','voided')",
-            "CREATE TYPE stock_adjustment_status AS ENUM ('draft','posted')",
-            "CREATE TYPE stock_transfer_status AS ENUM ('draft','dispatched','received','cancelled')",
-            "CREATE TYPE serial_number_status AS ENUM ('in_stock','sold','returned')",
-            "CREATE TYPE subscription_status AS ENUM ('active','expired','suspended','cancelled')",
-            "CREATE TYPE printer_type AS ENUM ('thermal_80','thermal_58','a4','pdf')",
-            "CREATE TYPE appointment_type AS ENUM ('walk_in','advance')",
-            "CREATE TYPE appointment_status AS ENUM ('booked','confirmed','completed','cancelled','no_show')",
-            "CREATE TYPE day_of_week AS ENUM ('monday','tuesday','wednesday','thursday','friday','saturday','sunday')",
-        ];
-        foreach ($enums as $sql) {
-            // Extract type name for the DO block
-            preg_match("/CREATE TYPE (\w+)/", $sql, $m);
-            DB::statement("DO \$\$ BEGIN {$sql}; EXCEPTION WHEN duplicate_object THEN null; END \$\$;");
+        $driver = DB::connection()->getDriverName();
+
+        // PostgreSQL needs custom ENUM types created up-front.
+        // MySQL/MariaDB: column definitions use plain strings â€” no pre-creation needed.
+        if ($driver === 'pgsql') {
+            $enums = [
+                "CREATE TYPE tenant_status AS ENUM ('active','suspended')",
+                "CREATE TYPE tax_type AS ENUM ('vat','gst','sales_tax','custom')",
+                "CREATE TYPE invoice_status AS ENUM ('held','completed','voided')",
+                "CREATE TYPE invoice_type AS ENUM ('sale','return')",
+                "CREATE TYPE payment_method AS ENUM ('cash','debit_card','credit_card','bank_transfer','mobile_wallet','credit_sale','store_credit','gift_card','patient_advance')",
+                "CREATE TYPE stock_movement_type AS ENUM ('purchase_receipt','purchase_return','sale','sale_return','adjustment','transfer_out','transfer_in','opening_balance')",
+                "CREATE TYPE loyalty_transaction_type AS ENUM ('earn','redeem','adjustment')",
+                "CREATE TYPE coupon_discount_type AS ENUM ('percentage','fixed')",
+                "CREATE TYPE gift_card_transaction_type AS ENUM ('issue','redeem','reload')",
+                "CREATE TYPE customer_ledger_entry_type AS ENUM ('invoice','payment','return','opening_balance')",
+                "CREATE TYPE supplier_ledger_entry_type AS ENUM ('purchase_invoice','payment','return','opening_balance','void_reversal')",
+                "CREATE TYPE purchase_order_status AS ENUM ('draft','sent','partially_received','received','cancelled')",
+                "CREATE TYPE goods_receipt_status AS ENUM ('draft','posted','voided')",
+                "CREATE TYPE supplier_invoice_status AS ENUM ('unpaid','partially_paid','paid','voided')",
+                "CREATE TYPE stock_adjustment_status AS ENUM ('draft','posted')",
+                "CREATE TYPE stock_transfer_status AS ENUM ('draft','dispatched','received','cancelled')",
+                "CREATE TYPE serial_number_status AS ENUM ('in_stock','sold','returned')",
+                "CREATE TYPE subscription_status AS ENUM ('active','expired','suspended','cancelled')",
+                "CREATE TYPE printer_type AS ENUM ('thermal_80','thermal_58','a4','pdf')",
+                "CREATE TYPE appointment_type AS ENUM ('walk_in','advance')",
+                "CREATE TYPE appointment_status AS ENUM ('booked','confirmed','completed','cancelled','no_show')",
+                "CREATE TYPE day_of_week AS ENUM ('monday','tuesday','wednesday','thursday','friday','saturday','sunday')",
+            ];
+            foreach ($enums as $sql) {
+                DB::statement("DO \$\$ BEGIN {$sql}; EXCEPTION WHEN duplicate_object THEN null; END \$\$;");
+            }
         }
+
+        // UUIDs are generated in PHP by HasUuidPrimaryKey trait â€” no DB-level default needed.
 
         // ---------- Tenants ----------
         Schema::create('tenants', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->string('name');
             $table->string('base_currency', 10)->default('USD');
             $table->string('status')->default('active');
@@ -55,7 +60,7 @@ return new class extends Migration
 
         // ---------- Plans & Subscriptions ----------
         Schema::create('plans', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->string('name')->unique();
             $table->integer('user_limit')->nullable();
             $table->integer('invoice_limit')->nullable();
@@ -66,7 +71,7 @@ return new class extends Migration
         });
 
         Schema::create('tenant_subscriptions', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id')->unique();
             $table->uuid('plan_id');
             $table->timestamp('start_date');
@@ -81,7 +86,7 @@ return new class extends Migration
 
         // ---------- Platform Admins ----------
         Schema::create('platform_admins', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->string('username')->unique();
             $table->string('email')->nullable();
             $table->string('full_name');
@@ -91,7 +96,7 @@ return new class extends Migration
 
         // ---------- Module Entitlements ----------
         Schema::create('module_catalog', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->string('code')->unique();
             $table->string('name');
             $table->text('description')->nullable();
@@ -100,14 +105,14 @@ return new class extends Migration
         });
 
         Schema::create('tenant_modules', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('module_id');
             $table->boolean('enabled')->default(false);
             $table->timestamp('start_date')->nullable();
             $table->timestamp('expiry_date')->nullable();
             $table->integer('grace_period_days')->default(7);
-            $table->jsonb('limits')->nullable();
+            $table->json('limits')->nullable();
             $table->timestamps();
 
             $table->unique(['tenant_id', 'module_id']);
@@ -117,7 +122,7 @@ return new class extends Migration
 
         // ---------- Branches ----------
         Schema::create('branches', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('name');
             $table->string('code');
@@ -131,7 +136,7 @@ return new class extends Migration
 
         // ---------- Users ----------
         Schema::create('users', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('full_name');
             $table->string('username');
@@ -147,14 +152,14 @@ return new class extends Migration
 
         // ---------- Roles & Permissions ----------
         Schema::create('permissions', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->string('code')->unique();
             $table->string('module');
             $table->string('description');
         });
 
         Schema::create('roles', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('name');
             $table->boolean('is_system_role')->default(false);
@@ -190,7 +195,7 @@ return new class extends Migration
         });
 
         Schema::create('exchange_rates', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->string('currency_code', 10);
             $table->decimal('rate_to_base', 18, 8);
             $table->timestamp('effective_at')->useCurrent();
@@ -201,7 +206,7 @@ return new class extends Migration
 
         // ---------- Tax Templates ----------
         Schema::create('tax_templates', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('name');
             $table->string('tax_type')->default('custom');
@@ -212,7 +217,7 @@ return new class extends Migration
 
         // ---------- Categories ----------
         Schema::create('categories', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('parent_id')->nullable();
             $table->string('name');
@@ -221,7 +226,7 @@ return new class extends Migration
 
         // ---------- Products ----------
         Schema::create('products', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('sku');
             $table->string('barcode')->nullable();
@@ -234,7 +239,7 @@ return new class extends Migration
             $table->uuid('tax_template_id')->nullable();
             $table->decimal('reorder_level', 14, 4)->default(0);
             $table->uuid('parent_product_id')->nullable();
-            $table->jsonb('variant_attributes')->nullable();
+            $table->json('variant_attributes')->nullable();
             $table->boolean('is_bundle')->default(false);
             $table->boolean('track_batches')->default(false);
             $table->boolean('track_serials')->default(false);
@@ -249,7 +254,7 @@ return new class extends Migration
         });
 
         Schema::create('bundle_components', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('bundle_product_id');
             $table->uuid('component_product_id');
             $table->decimal('quantity', 14, 4);
@@ -261,7 +266,7 @@ return new class extends Migration
 
         // ---------- Warehouses & Stock ----------
         Schema::create('warehouses', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('branch_id');
             $table->string('name');
             $table->boolean('is_default')->default(true);
@@ -281,7 +286,7 @@ return new class extends Migration
         });
 
         Schema::create('stock_ledger', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('warehouse_id');
             $table->uuid('product_id');
             $table->string('movement_type');
@@ -298,7 +303,7 @@ return new class extends Migration
 
         // ---------- Batches & Serials ----------
         Schema::create('batches', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('product_id');
             $table->uuid('warehouse_id');
             $table->string('batch_no');
@@ -314,7 +319,7 @@ return new class extends Migration
         });
 
         Schema::create('serial_numbers', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('product_id');
             $table->uuid('warehouse_id');
             $table->string('serial_no');
@@ -329,7 +334,7 @@ return new class extends Migration
 
         // ---------- Customers ----------
         Schema::create('customers', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('name');
             $table->string('phone')->nullable();
@@ -345,7 +350,7 @@ return new class extends Migration
         });
 
         Schema::create('customer_ledger_entries', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('customer_id');
             $table->string('entry_type');
             $table->decimal('amount', 14, 4);
@@ -360,7 +365,7 @@ return new class extends Migration
         });
 
         Schema::create('loyalty_transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('customer_id');
             $table->string('type');
             $table->decimal('points', 14, 4);
@@ -375,7 +380,7 @@ return new class extends Migration
 
         // ---------- Coupons & Gift Cards ----------
         Schema::create('coupons', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('code');
             $table->string('discount_type');
@@ -390,7 +395,7 @@ return new class extends Migration
         });
 
         Schema::create('gift_cards', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('code');
             $table->decimal('initial_balance', 14, 4);
@@ -403,7 +408,7 @@ return new class extends Migration
         });
 
         Schema::create('gift_card_transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('gift_card_id');
             $table->string('type');
             $table->decimal('amount', 14, 4);
@@ -417,7 +422,7 @@ return new class extends Migration
 
         // ---------- Suppliers ----------
         Schema::create('suppliers', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('name');
             $table->string('phone')->nullable();
@@ -430,7 +435,7 @@ return new class extends Migration
         });
 
         Schema::create('supplier_ledger_entries', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('supplier_id');
             $table->string('entry_type');
             $table->decimal('amount', 14, 4);
@@ -446,7 +451,7 @@ return new class extends Migration
 
         // ---------- Invoices (POS Sales) ----------
         Schema::create('invoices', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('branch_id');
             $table->string('invoice_no');
             $table->string('invoice_type')->default('sale');
@@ -478,7 +483,7 @@ return new class extends Migration
         });
 
         Schema::create('invoice_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('invoice_id');
             $table->uuid('product_id');
             $table->decimal('quantity', 14, 4);
@@ -493,7 +498,7 @@ return new class extends Migration
         });
 
         Schema::create('invoice_line_batches', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('invoice_line_id');
             $table->uuid('batch_id');
             $table->decimal('quantity', 14, 4);
@@ -503,7 +508,7 @@ return new class extends Migration
         });
 
         Schema::create('payments', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('invoice_id');
             $table->string('method');
             $table->decimal('amount', 14, 4);
@@ -515,7 +520,7 @@ return new class extends Migration
         });
 
         Schema::create('cash_drawer_sessions', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('branch_id');
             $table->uuid('opened_by');
             $table->uuid('closed_by')->nullable();
@@ -532,7 +537,7 @@ return new class extends Migration
 
         // ---------- Purchasing ----------
         Schema::create('purchase_orders', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('supplier_id');
             $table->uuid('warehouse_id');
@@ -549,7 +554,7 @@ return new class extends Migration
         });
 
         Schema::create('purchase_order_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('purchase_order_id');
             $table->uuid('product_id');
             $table->decimal('quantity_ordered', 14, 4);
@@ -561,7 +566,7 @@ return new class extends Migration
         });
 
         Schema::create('goods_receipts', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('purchase_order_id')->nullable();
             $table->uuid('warehouse_id');
             $table->string('receipt_no');
@@ -576,21 +581,21 @@ return new class extends Migration
         });
 
         Schema::create('goods_receipt_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('goods_receipt_id');
             $table->uuid('product_id');
             $table->decimal('quantity_received', 14, 4);
             $table->decimal('unit_cost', 14, 4);
             $table->string('batch_no')->nullable();
             $table->date('expiry_date')->nullable();
-            $table->jsonb('serial_numbers')->nullable();
+            $table->json('serial_numbers')->nullable();
 
             $table->foreign('goods_receipt_id')->references('id')->on('goods_receipts')->onDelete('cascade');
             $table->foreign('product_id')->references('id')->on('products');
         });
 
         Schema::create('supplier_invoices', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('supplier_id');
             $table->uuid('goods_receipt_id')->nullable();
             $table->string('invoice_no');
@@ -607,7 +612,7 @@ return new class extends Migration
         });
 
         Schema::create('supplier_payments', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('supplier_id');
             $table->decimal('amount', 14, 4);
             $table->string('method')->default('cash');
@@ -631,7 +636,7 @@ return new class extends Migration
 
         // ---------- Inventory Ops ----------
         Schema::create('stock_adjustments', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('warehouse_id');
             $table->string('reason_code');
             $table->text('note')->nullable();
@@ -642,7 +647,7 @@ return new class extends Migration
         });
 
         Schema::create('stock_adjustment_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('stock_adjustment_id');
             $table->uuid('product_id');
             $table->decimal('counted_quantity', 14, 4);
@@ -653,7 +658,7 @@ return new class extends Migration
         });
 
         Schema::create('stock_transfers', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('from_warehouse_id');
             $table->uuid('to_warehouse_id');
             $table->string('status')->default('draft');
@@ -664,7 +669,7 @@ return new class extends Migration
         });
 
         Schema::create('stock_transfer_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('stock_transfer_id');
             $table->uuid('product_id');
             $table->decimal('quantity', 14, 4);
@@ -675,13 +680,13 @@ return new class extends Migration
 
         // ---------- Accounting Lite ----------
         Schema::create('expense_categories', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('name');
         });
 
         Schema::create('expenses', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('branch_id');
             $table->uuid('category_id');
             $table->decimal('amount', 14, 4);
@@ -697,7 +702,7 @@ return new class extends Migration
         });
 
         Schema::create('income_entries', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('branch_id');
             $table->string('category');
             $table->decimal('amount', 14, 4);
@@ -711,7 +716,7 @@ return new class extends Migration
         });
 
         Schema::create('daily_closings', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('branch_id');
             $table->date('business_date');
             $table->decimal('expected_cash', 14, 4);
@@ -729,7 +734,7 @@ return new class extends Migration
 
         // ---------- Printing ----------
         Schema::create('printers', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('branch_id');
             $table->string('name');
@@ -744,7 +749,7 @@ return new class extends Migration
         });
 
         Schema::create('receipt_settings', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id')->unique();
             $table->text('header_text')->nullable();
             $table->text('footer_text')->nullable();
@@ -754,7 +759,7 @@ return new class extends Migration
 
         // ---------- Hospital Module ----------
         Schema::create('doctors', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('linked_user_id')->unique()->nullable();
             $table->string('name');
@@ -772,7 +777,7 @@ return new class extends Migration
         });
 
         Schema::create('doctor_schedules', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('doctor_id');
             $table->string('day_of_week');
             $table->string('start_time', 5);
@@ -783,7 +788,7 @@ return new class extends Migration
         });
 
         Schema::create('patients', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->string('name');
             $table->string('phone')->nullable();
@@ -799,7 +804,7 @@ return new class extends Migration
         });
 
         Schema::create('appointments', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('doctor_id');
             $table->uuid('patient_id');
@@ -830,7 +835,7 @@ return new class extends Migration
         });
 
         Schema::create('patient_ledger_entries', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('patient_id');
             $table->uuid('appointment_id')->nullable();
@@ -848,7 +853,7 @@ return new class extends Migration
         });
 
         Schema::create('appointment_bills', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('tenant_id');
             $table->uuid('appointment_id')->unique();
             $table->boolean('is_draft')->default(false);
@@ -869,7 +874,7 @@ return new class extends Migration
         });
 
         Schema::create('appointment_bill_lines', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('bill_id');
             $table->string('line_type');
             $table->uuid('product_id')->nullable();
@@ -883,7 +888,7 @@ return new class extends Migration
         });
 
         Schema::create('appointment_bill_payments', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             $table->uuid('bill_id');
             $table->string('method');
             $table->decimal('amount', 14, 4);
@@ -958,27 +963,30 @@ return new class extends Migration
         Schema::dropIfExists('plans');
         Schema::dropIfExists('tenants');
 
-        DB::statement("DROP TYPE IF EXISTS appointment_status");
-        DB::statement("DROP TYPE IF EXISTS appointment_type");
-        DB::statement("DROP TYPE IF EXISTS day_of_week");
-        DB::statement("DROP TYPE IF EXISTS printer_type");
-        DB::statement("DROP TYPE IF EXISTS subscription_status");
-        DB::statement("DROP TYPE IF EXISTS serial_number_status");
-        DB::statement("DROP TYPE IF EXISTS stock_transfer_status");
-        DB::statement("DROP TYPE IF EXISTS stock_adjustment_status");
-        DB::statement("DROP TYPE IF EXISTS supplier_invoice_status");
-        DB::statement("DROP TYPE IF EXISTS goods_receipt_status");
-        DB::statement("DROP TYPE IF EXISTS purchase_order_status");
-        DB::statement("DROP TYPE IF EXISTS supplier_ledger_entry_type");
-        DB::statement("DROP TYPE IF EXISTS customer_ledger_entry_type");
-        DB::statement("DROP TYPE IF EXISTS gift_card_transaction_type");
-        DB::statement("DROP TYPE IF EXISTS coupon_discount_type");
-        DB::statement("DROP TYPE IF EXISTS loyalty_transaction_type");
-        DB::statement("DROP TYPE IF EXISTS stock_movement_type");
-        DB::statement("DROP TYPE IF EXISTS payment_method");
-        DB::statement("DROP TYPE IF EXISTS invoice_type");
-        DB::statement("DROP TYPE IF EXISTS invoice_status");
-        DB::statement("DROP TYPE IF EXISTS tax_type");
-        DB::statement("DROP TYPE IF EXISTS tenant_status");
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement("DROP TYPE IF EXISTS appointment_status");
+            DB::statement("DROP TYPE IF EXISTS appointment_type");
+            DB::statement("DROP TYPE IF EXISTS day_of_week");
+            DB::statement("DROP TYPE IF EXISTS printer_type");
+            DB::statement("DROP TYPE IF EXISTS subscription_status");
+            DB::statement("DROP TYPE IF EXISTS serial_number_status");
+            DB::statement("DROP TYPE IF EXISTS stock_transfer_status");
+            DB::statement("DROP TYPE IF EXISTS stock_adjustment_status");
+            DB::statement("DROP TYPE IF EXISTS supplier_invoice_status");
+            DB::statement("DROP TYPE IF EXISTS goods_receipt_status");
+            DB::statement("DROP TYPE IF EXISTS purchase_order_status");
+            DB::statement("DROP TYPE IF EXISTS supplier_ledger_entry_type");
+            DB::statement("DROP TYPE IF EXISTS customer_ledger_entry_type");
+            DB::statement("DROP TYPE IF EXISTS gift_card_transaction_type");
+            DB::statement("DROP TYPE IF EXISTS coupon_discount_type");
+            DB::statement("DROP TYPE IF EXISTS loyalty_transaction_type");
+            DB::statement("DROP TYPE IF EXISTS stock_movement_type");
+            DB::statement("DROP TYPE IF EXISTS payment_method");
+            DB::statement("DROP TYPE IF EXISTS invoice_type");
+            DB::statement("DROP TYPE IF EXISTS invoice_status");
+            DB::statement("DROP TYPE IF EXISTS tax_type");
+            DB::statement("DROP TYPE IF EXISTS tenant_status");
+        }
     }
 };
+

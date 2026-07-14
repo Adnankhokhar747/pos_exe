@@ -23,9 +23,21 @@ interface VantagePrinting {
   printToPdf: (html: string) => Promise<VantagePrintToPdfResult>;
 }
 
+interface VantageUpdateInfo {
+  version: string;
+  releaseNotes?: string | null;
+}
+
+interface VantageUpdater {
+  onAvailable: (cb: (info: VantageUpdateInfo) => void) => void;
+  onDownloaded: (cb: (info: VantageUpdateInfo) => void) => void;
+  installNow: () => Promise<void>;
+}
+
 interface Vantage {
   appVersion: string;
   printing: VantagePrinting;
+  updater: VantageUpdater;
 }
 
 interface Window {

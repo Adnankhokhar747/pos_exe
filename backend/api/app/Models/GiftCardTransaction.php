@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class GiftCardTransaction extends Model
 {
-    protected $table = 'gift_card_transactions';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'gift_card_transactions';
     public $timestamps = false;
 
     protected $fillable = [

@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Coupon extends Model
 {
-    protected $table = 'coupons';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'coupons';
     public $timestamps = false;
 
     protected $fillable = [

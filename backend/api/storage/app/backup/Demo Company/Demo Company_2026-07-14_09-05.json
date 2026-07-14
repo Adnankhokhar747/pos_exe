@@ -1,0 +1,813 @@
+{
+    "version": 2,
+    "exportedAt": "2026-07-14T09:05:31.769333Z",
+    "tenantId": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+    "tables": {
+        "branches": [
+            {
+                "id": "82f7acc1-7d75-4cd6-b8d9-9642f98ad50b",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Main Branch",
+                "code": "MAIN",
+                "timezone": "UTC",
+                "is_active": true,
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "users": [
+            {
+                "id": "bf82f42d-d61f-4261-9db0-515abb4af841",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "full_name": "Demo Admin",
+                "username": "admin",
+                "email": "admin@demo.local",
+                "pin_hash": null,
+                "password_hash": "$2y$12$mHF8l76WlSEzGil31CKNyO6YOP6Ff.YR1C1Og0Wb8MhKx4wAL2yvW",
+                "status": "active",
+                "created_at": null,
+                "updated_at": null
+            }
+        ],
+        "roles": [
+            {
+                "id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Company Admin",
+                "is_system_role": true
+            },
+            {
+                "id": "57394a0e-44ca-42f0-a6d8-91bf3a88a647",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Cashier",
+                "is_system_role": true
+            },
+            {
+                "id": "da8fecd3-57b6-43f8-b697-642795b48879",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Inventory Manager",
+                "is_system_role": true
+            },
+            {
+                "id": "ea339df0-1103-4f26-a0df-7dcaa4637f99",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Accountant",
+                "is_system_role": true
+            },
+            {
+                "id": "1f276c09-5d67-4f6c-91eb-4fc04277fb58",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Receptionist",
+                "is_system_role": true
+            },
+            {
+                "id": "192552a7-c9ff-43bf-aa37-35d1bab119af",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Doctor",
+                "is_system_role": true
+            },
+            {
+                "id": "c630b295-960a-4a03-9094-87d2fda88e3a",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Hospital Manager",
+                "is_system_role": true
+            }
+        ],
+        "role_permissions": [
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "41ac0593-99b6-46ae-8ec1-84e687d465f0"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "3e531795-bbb1-4299-ab46-67aad27ec03a"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "32337d13-1ebd-4b99-b68e-f3082b5013a7"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "50c07bb3-5808-4f11-a9fd-52029982dbff"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "8746b7e6-048a-433f-bb10-48b48b3f43e5"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "ceb36de4-34ab-4dcf-82f9-fedc71bf9297"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "d9bd03b0-27bc-4a18-83a0-764979b7af28"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "b87ee251-fb10-4970-b0b4-ae2c1056d1b0"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "d0cf03cd-a085-4d46-a067-1d2ac00f757a"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "8d7926d9-e44d-43b3-a2e0-432269441b56"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "60cbe3b3-ceac-49d5-9134-2dfe6a85e14a"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "90622c3a-7431-4802-b7b0-0d8e6b5817e0"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "726c3f04-ce86-4d0e-bba5-f382a111b468"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "599a59b6-ae3d-423a-af6b-6230d9da5e8a"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "ef84c4f4-0d35-4426-a656-7e237a6f6ebc"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "02e6bfb9-d521-4918-9491-f1638f4c083a"
+            },
+            {
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207",
+                "permission_id": "61a896ae-3312-45d6-af19-b92c30aa500a"
+            },
+            {
+                "role_id": "57394a0e-44ca-42f0-a6d8-91bf3a88a647",
+                "permission_id": "3e531795-bbb1-4299-ab46-67aad27ec03a"
+            },
+            {
+                "role_id": "57394a0e-44ca-42f0-a6d8-91bf3a88a647",
+                "permission_id": "50c07bb3-5808-4f11-a9fd-52029982dbff"
+            },
+            {
+                "role_id": "57394a0e-44ca-42f0-a6d8-91bf3a88a647",
+                "permission_id": "41ac0593-99b6-46ae-8ec1-84e687d465f0"
+            },
+            {
+                "role_id": "57394a0e-44ca-42f0-a6d8-91bf3a88a647",
+                "permission_id": "d0cf03cd-a085-4d46-a067-1d2ac00f757a"
+            },
+            {
+                "role_id": "57394a0e-44ca-42f0-a6d8-91bf3a88a647",
+                "permission_id": "b87ee251-fb10-4970-b0b4-ae2c1056d1b0"
+            },
+            {
+                "role_id": "da8fecd3-57b6-43f8-b697-642795b48879",
+                "permission_id": "41ac0593-99b6-46ae-8ec1-84e687d465f0"
+            },
+            {
+                "role_id": "da8fecd3-57b6-43f8-b697-642795b48879",
+                "permission_id": "ceb36de4-34ab-4dcf-82f9-fedc71bf9297"
+            },
+            {
+                "role_id": "da8fecd3-57b6-43f8-b697-642795b48879",
+                "permission_id": "d9bd03b0-27bc-4a18-83a0-764979b7af28"
+            },
+            {
+                "role_id": "da8fecd3-57b6-43f8-b697-642795b48879",
+                "permission_id": "8746b7e6-048a-433f-bb10-48b48b3f43e5"
+            },
+            {
+                "role_id": "da8fecd3-57b6-43f8-b697-642795b48879",
+                "permission_id": "8d7926d9-e44d-43b3-a2e0-432269441b56"
+            },
+            {
+                "role_id": "ea339df0-1103-4f26-a0df-7dcaa4637f99",
+                "permission_id": "8d7926d9-e44d-43b3-a2e0-432269441b56"
+            },
+            {
+                "role_id": "ea339df0-1103-4f26-a0df-7dcaa4637f99",
+                "permission_id": "b87ee251-fb10-4970-b0b4-ae2c1056d1b0"
+            },
+            {
+                "role_id": "ea339df0-1103-4f26-a0df-7dcaa4637f99",
+                "permission_id": "d0cf03cd-a085-4d46-a067-1d2ac00f757a"
+            },
+            {
+                "role_id": "ea339df0-1103-4f26-a0df-7dcaa4637f99",
+                "permission_id": "32337d13-1ebd-4b99-b68e-f3082b5013a7"
+            },
+            {
+                "role_id": "ea339df0-1103-4f26-a0df-7dcaa4637f99",
+                "permission_id": "90622c3a-7431-4802-b7b0-0d8e6b5817e0"
+            },
+            {
+                "role_id": "1f276c09-5d67-4f6c-91eb-4fc04277fb58",
+                "permission_id": "599a59b6-ae3d-423a-af6b-6230d9da5e8a"
+            },
+            {
+                "role_id": "1f276c09-5d67-4f6c-91eb-4fc04277fb58",
+                "permission_id": "ef84c4f4-0d35-4426-a656-7e237a6f6ebc"
+            },
+            {
+                "role_id": "1f276c09-5d67-4f6c-91eb-4fc04277fb58",
+                "permission_id": "02e6bfb9-d521-4918-9491-f1638f4c083a"
+            },
+            {
+                "role_id": "192552a7-c9ff-43bf-aa37-35d1bab119af",
+                "permission_id": "ef84c4f4-0d35-4426-a656-7e237a6f6ebc"
+            },
+            {
+                "role_id": "c630b295-960a-4a03-9094-87d2fda88e3a",
+                "permission_id": "726c3f04-ce86-4d0e-bba5-f382a111b468"
+            },
+            {
+                "role_id": "c630b295-960a-4a03-9094-87d2fda88e3a",
+                "permission_id": "599a59b6-ae3d-423a-af6b-6230d9da5e8a"
+            },
+            {
+                "role_id": "c630b295-960a-4a03-9094-87d2fda88e3a",
+                "permission_id": "ef84c4f4-0d35-4426-a656-7e237a6f6ebc"
+            },
+            {
+                "role_id": "c630b295-960a-4a03-9094-87d2fda88e3a",
+                "permission_id": "02e6bfb9-d521-4918-9491-f1638f4c083a"
+            },
+            {
+                "role_id": "c630b295-960a-4a03-9094-87d2fda88e3a",
+                "permission_id": "61a896ae-3312-45d6-af19-b92c30aa500a"
+            }
+        ],
+        "user_roles": [
+            {
+                "user_id": "bf82f42d-d61f-4261-9db0-515abb4af841",
+                "role_id": "bb4a42a1-777a-4413-a938-9d39fd101207"
+            }
+        ],
+        "tax_templates": [
+            {
+                "id": "d0a636a5-7c3e-4e57-bc28-b3287120a08a",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Simplify",
+                "tax_type": "vat",
+                "rate_pct": "1.000",
+                "is_inclusive": false,
+                "is_active": true
+            }
+        ],
+        "categories": [],
+        "products": [
+            {
+                "id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "sku": "Mohammad",
+                "barcode": "56789",
+                "name": "test",
+                "description": "hh",
+                "category_id": null,
+                "cost_price": "10.0000",
+                "sale_price": "50.0000",
+                "tax_rate_pct": "4.000",
+                "tax_template_id": null,
+                "reorder_level": "0.0000",
+                "parent_product_id": null,
+                "variant_attributes": null,
+                "is_bundle": false,
+                "track_batches": false,
+                "track_serials": false,
+                "deleted_at": null,
+                "created_at": "2026-07-13 11:29:40",
+                "updated_at": "2026-07-13 11:29:40"
+            }
+        ],
+        "bundle_components": [],
+        "warehouses": [
+            {
+                "id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "branch_id": "82f7acc1-7d75-4cd6-b8d9-9642f98ad50b",
+                "name": "Main Warehouse",
+                "is_default": true
+            }
+        ],
+        "stock_levels": [
+            {
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "quantity_on_hand": "198.0000",
+                "quantity_reserved": "0.0000"
+            }
+        ],
+        "stock_ledger": [
+            {
+                "id": "130b198b-6145-49d7-8830-79bd4baf532d",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "movement_type": "purchase_receipt",
+                "quantity_delta": "100.0000",
+                "unit_cost_at_movement": "10.0000",
+                "reference_table": "goods_receipts",
+                "reference_id": "8d30cd41-91ba-48ce-9efc-8d5079b79d30",
+                "occurred_at": "2026-07-13 12:11:03"
+            },
+            {
+                "id": "02603df8-780e-4957-ba63-5003ce84e8d4",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "movement_type": "purchase_receipt",
+                "quantity_delta": "100.0000",
+                "unit_cost_at_movement": "10.0000",
+                "reference_table": "goods_receipts",
+                "reference_id": "50fa06ad-91d9-41bc-b217-22cc8337d41e",
+                "occurred_at": "2026-07-13 12:47:58"
+            },
+            {
+                "id": "e4285d62-d586-4e58-9c22-3a2e3c85387c",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "movement_type": "sale",
+                "quantity_delta": "-2.0000",
+                "unit_cost_at_movement": "0.0000",
+                "reference_table": "invoices",
+                "reference_id": "335d8397-d559-40ce-93e2-6c05345e1556",
+                "occurred_at": "2026-07-13 16:45:40"
+            }
+        ],
+        "batches": [],
+        "serial_numbers": [],
+        "customers": [],
+        "customer_ledger_entries": [],
+        "loyalty_transactions": [],
+        "coupons": [],
+        "gift_cards": [],
+        "gift_card_transactions": [],
+        "suppliers": [
+            {
+                "id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Me",
+                "phone": "678",
+                "email": "test@gmail.com",
+                "address": "4254",
+                "tax_number": null,
+                "current_balance": "-1000.0000",
+                "is_active": true,
+                "created_at": "2026-07-13 11:30:16",
+                "updated_at": "2026-07-13 12:49:39"
+            }
+        ],
+        "supplier_ledger_entries": [
+            {
+                "id": "2773ed2a-16f4-46de-9b39-d3e8d7610d63",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "entry_type": "purchase_invoice",
+                "amount": "1000.0000",
+                "balance_after": "1000.0000",
+                "reference_table": "supplier_invoices",
+                "reference_id": "a27ca2bf-5ac7-4406-a46a-86ec550b6df6",
+                "note": null,
+                "occurred_at": "2026-07-13 12:11:03"
+            },
+            {
+                "id": "f3ac8bd4-fdc9-42a6-beb4-d0b146df34a8",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "entry_type": "payment",
+                "amount": "-500.0000",
+                "balance_after": "500.0000",
+                "reference_table": "supplier_payments",
+                "reference_id": "93817393-c0dc-4f32-ba5a-b6fab068ce5f",
+                "note": null,
+                "occurred_at": "2026-07-13 12:23:30"
+            },
+            {
+                "id": "7b43a4e7-d4cd-4c82-bbbd-c1dd7683c693",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "entry_type": "payment",
+                "amount": "-500.0000",
+                "balance_after": "0.0000",
+                "reference_table": "supplier_payments",
+                "reference_id": "e5a35e6d-984f-4768-ab79-0ac9c2d73ad5",
+                "note": null,
+                "occurred_at": "2026-07-13 12:23:56"
+            },
+            {
+                "id": "3c853575-ed2d-4673-a2e7-25e8386d8374",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "entry_type": "advance_payment",
+                "amount": "-1000.0000",
+                "balance_after": "-1000.0000",
+                "reference_table": "supplier_payments",
+                "reference_id": "30633594-efde-4527-91f7-6381a5673882",
+                "note": null,
+                "occurred_at": "2026-07-13 12:35:57"
+            },
+            {
+                "id": "bbf49dda-2ab6-4d81-bcc1-cf0ada3c2556",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "entry_type": "advance_payment",
+                "amount": "-200.0000",
+                "balance_after": "-1200.0000",
+                "reference_table": "supplier_payments",
+                "reference_id": "ab7bb232-ea9e-401e-84a3-530e5b9d5d76",
+                "note": null,
+                "occurred_at": "2026-07-13 12:47:42"
+            },
+            {
+                "id": "bf3bb8f0-7e11-4ed8-a60b-1149af22098f",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "entry_type": "purchase_invoice",
+                "amount": "1000.0000",
+                "balance_after": "-200.0000",
+                "reference_table": "supplier_invoices",
+                "reference_id": "f73f2743-1e1a-4b83-b06c-1bf8dbf7158a",
+                "note": null,
+                "occurred_at": "2026-07-13 12:47:58"
+            },
+            {
+                "id": "892f01d7-0ffd-4f9a-9c57-b468c428e1fe",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "entry_type": "payment",
+                "amount": "-800.0000",
+                "balance_after": "-1000.0000",
+                "reference_table": "supplier_payments",
+                "reference_id": "f8b6982e-7142-4c69-ba22-efd014f9cf60",
+                "note": null,
+                "occurred_at": "2026-07-13 12:49:40"
+            }
+        ],
+        "invoices": [
+            {
+                "id": "335d8397-d559-40ce-93e2-6c05345e1556",
+                "branch_id": "82f7acc1-7d75-4cd6-b8d9-9642f98ad50b",
+                "invoice_no": "INV-000001",
+                "invoice_type": "sale",
+                "status": "completed",
+                "customer_id": null,
+                "patient_id": "744d79bb-7442-4b7c-a417-53df026655e9",
+                "subtotal": "100.0000",
+                "discount_total": "0.0000",
+                "tax_total": "0.0000",
+                "grand_total": "100.0000",
+                "cashier_id": "bf82f42d-d61f-4261-9db0-515abb4af841",
+                "held_label": null,
+                "original_invoice_id": null,
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "currency_code": "USD",
+                "exchange_rate_to_base": null,
+                "loyalty_points_earned": "0.0000",
+                "loyalty_points_redeemed": "0.0000",
+                "coupon_code": null,
+                "coupon_discount_amount": "0.0000",
+                "created_at": "2026-07-13 13:45:40",
+                "updated_at": "2026-07-13 13:45:40"
+            }
+        ],
+        "invoice_lines": [
+            {
+                "id": "1d0ae831-e93c-4f57-8dde-60c47bdf973d",
+                "invoice_id": "335d8397-d559-40ce-93e2-6c05345e1556",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "quantity": "2.0000",
+                "unit_price": "50.0000",
+                "discount_value": "0.0000",
+                "tax_amount": "0.0000",
+                "line_total": "100.0000",
+                "original_invoice_line_id": null
+            }
+        ],
+        "invoice_line_batches": [],
+        "payments": [
+            {
+                "id": "54a1141e-cb43-4b5b-b2e3-b77215c7ed0e",
+                "invoice_id": "335d8397-d559-40ce-93e2-6c05345e1556",
+                "method": "patient_advance",
+                "amount": "104.0000",
+                "received_amount": null,
+                "change_amount": null,
+                "reference": null
+            }
+        ],
+        "cash_drawer_sessions": [],
+        "purchase_orders": [
+            {
+                "id": "4ba61141-186c-4a80-9815-5d19ab52f9d0",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "order_no": "PO-00001",
+                "status": "received",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "created_at": "2026-07-13 11:31:13",
+                "updated_at": "2026-07-13 12:11:03"
+            },
+            {
+                "id": "e94559c5-025f-4dfd-8d60-d2b8ed7303a1",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "order_no": "PO-00002",
+                "status": "received",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "created_at": "2026-07-13 11:33:14",
+                "updated_at": "2026-07-13 12:47:58"
+            },
+            {
+                "id": "32fc6d8b-489e-4357-a32d-ca388302b29a",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "order_no": "PO-00003",
+                "status": "sent",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "created_at": "2026-07-13 11:38:14",
+                "updated_at": "2026-07-13 12:24:44"
+            }
+        ],
+        "purchase_order_lines": [
+            {
+                "id": "5ed04097-11dc-4430-9b3d-4f720253f262",
+                "purchase_order_id": "32fc6d8b-489e-4357-a32d-ca388302b29a",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "quantity_ordered": "100.0000",
+                "quantity_received": "0.0000",
+                "unit_cost": "10.0000"
+            },
+            {
+                "id": "e5487e1d-92a0-4d75-9f0e-414206408719",
+                "purchase_order_id": "4ba61141-186c-4a80-9815-5d19ab52f9d0",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "quantity_ordered": "100.0000",
+                "quantity_received": "100.0000",
+                "unit_cost": "10.0000"
+            },
+            {
+                "id": "85996d7e-b7f0-490e-804d-aa95696e8349",
+                "purchase_order_id": "e94559c5-025f-4dfd-8d60-d2b8ed7303a1",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "quantity_ordered": "100.0000",
+                "quantity_received": "100.0000",
+                "unit_cost": "10.0000"
+            }
+        ],
+        "goods_receipts": [
+            {
+                "id": "8d30cd41-91ba-48ce-9efc-8d5079b79d30",
+                "purchase_order_id": "4ba61141-186c-4a80-9815-5d19ab52f9d0",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "receipt_no": "GR-00001",
+                "status": "posted",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "received_at": "2026-07-13 12:11:03"
+            },
+            {
+                "id": "50fa06ad-91d9-41bc-b217-22cc8337d41e",
+                "purchase_order_id": "e94559c5-025f-4dfd-8d60-d2b8ed7303a1",
+                "warehouse_id": "425a4d74-0fdc-4e2d-b24b-3002389cadb6",
+                "receipt_no": "GR-00002",
+                "status": "posted",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "received_at": "2026-07-13 12:47:58"
+            }
+        ],
+        "goods_receipt_lines": [
+            {
+                "id": "491df742-9b7e-4fe5-a180-713198b1b7be",
+                "goods_receipt_id": "8d30cd41-91ba-48ce-9efc-8d5079b79d30",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "quantity_received": "100.0000",
+                "unit_cost": "10.0000",
+                "batch_no": null,
+                "expiry_date": null,
+                "serial_numbers": null
+            },
+            {
+                "id": "325e6327-f673-4eb1-8721-eda9333b683a",
+                "goods_receipt_id": "50fa06ad-91d9-41bc-b217-22cc8337d41e",
+                "product_id": "064d83aa-2684-4be1-8452-fbc212bf0b89",
+                "quantity_received": "100.0000",
+                "unit_cost": "10.0000",
+                "batch_no": null,
+                "expiry_date": null,
+                "serial_numbers": null
+            }
+        ],
+        "supplier_invoices": [
+            {
+                "id": "a27ca2bf-5ac7-4406-a46a-86ec550b6df6",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "goods_receipt_id": "8d30cd41-91ba-48ce-9efc-8d5079b79d30",
+                "invoice_no": "SI-00001",
+                "amount": "1000.0000",
+                "amount_paid": "1000.0000",
+                "due_date": null,
+                "status": "paid",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "created_at": "2026-07-13 12:11:03"
+            },
+            {
+                "id": "f73f2743-1e1a-4b83-b06c-1bf8dbf7158a",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "goods_receipt_id": "50fa06ad-91d9-41bc-b217-22cc8337d41e",
+                "invoice_no": "SI-00002",
+                "amount": "1000.0000",
+                "amount_paid": "1000.0000",
+                "due_date": null,
+                "status": "paid",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "created_at": "2026-07-13 12:47:58"
+            }
+        ],
+        "supplier_payments": [
+            {
+                "id": "93817393-c0dc-4f32-ba5a-b6fab068ce5f",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "amount": "500.0000",
+                "method": "cash",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "paid_at": "2026-07-13 12:23:30",
+                "purchase_order_id": null
+            },
+            {
+                "id": "e5a35e6d-984f-4768-ab79-0ac9c2d73ad5",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "amount": "500.0000",
+                "method": "cash",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "paid_at": "2026-07-13 12:23:56",
+                "purchase_order_id": null
+            },
+            {
+                "id": "30633594-efde-4527-91f7-6381a5673882",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "amount": "1000.0000",
+                "method": "cash",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "paid_at": "2026-07-13 12:35:57",
+                "purchase_order_id": "4ba61141-186c-4a80-9815-5d19ab52f9d0"
+            },
+            {
+                "id": "ab7bb232-ea9e-401e-84a3-530e5b9d5d76",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "amount": "200.0000",
+                "method": "cash",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "paid_at": "2026-07-13 12:47:42",
+                "purchase_order_id": "e94559c5-025f-4dfd-8d60-d2b8ed7303a1"
+            },
+            {
+                "id": "f8b6982e-7142-4c69-ba22-efd014f9cf60",
+                "supplier_id": "90461d06-72a0-49e7-8ac6-34b104c90af3",
+                "amount": "800.0000",
+                "method": "cash",
+                "void_reason": null,
+                "voided_by": null,
+                "voided_at": null,
+                "paid_at": "2026-07-13 12:49:39",
+                "purchase_order_id": null
+            }
+        ],
+        "supplier_payment_allocations": [
+            {
+                "supplier_payment_id": "93817393-c0dc-4f32-ba5a-b6fab068ce5f",
+                "supplier_invoice_id": "a27ca2bf-5ac7-4406-a46a-86ec550b6df6",
+                "amount_allocated": "500.0000"
+            },
+            {
+                "supplier_payment_id": "e5a35e6d-984f-4768-ab79-0ac9c2d73ad5",
+                "supplier_invoice_id": "a27ca2bf-5ac7-4406-a46a-86ec550b6df6",
+                "amount_allocated": "500.0000"
+            },
+            {
+                "supplier_payment_id": "f8b6982e-7142-4c69-ba22-efd014f9cf60",
+                "supplier_invoice_id": "f73f2743-1e1a-4b83-b06c-1bf8dbf7158a",
+                "amount_allocated": "800.0000"
+            }
+        ],
+        "stock_adjustments": [],
+        "stock_adjustment_lines": [],
+        "stock_transfers": [],
+        "stock_transfer_lines": [],
+        "expense_categories": [],
+        "expenses": [],
+        "income_entries": [],
+        "daily_closings": [],
+        "printers": [],
+        "receipt_settings": [
+            {
+                "id": "0827b374-152c-42a7-ab23-7adc4d163e97",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "header_text": null,
+                "footer_text": null,
+                "paper_width_mm": 80,
+                "created_at": "2026-07-13 10:29:41",
+                "updated_at": "2026-07-13 10:29:41"
+            }
+        ],
+        "doctors": [
+            {
+                "id": "c55fb303-d5e1-4e24-a55c-d44ce43eda85",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "linked_user_id": null,
+                "name": "doc 1",
+                "specialization": "skin",
+                "phone": "6789",
+                "email": "ss@gmail.com",
+                "room_number": "8",
+                "consultation_fee": "2000.0000",
+                "is_active": true,
+                "created_at": "2026-07-13 12:58:59",
+                "updated_at": "2026-07-13 12:58:59"
+            }
+        ],
+        "doctor_schedules": [],
+        "patients": [
+            {
+                "id": "744d79bb-7442-4b7c-a417-53df026655e9",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "name": "Test pation 1",
+                "phone": "56789",
+                "gender": "male",
+                "date_of_birth": "2026-07-13",
+                "address": "hjk",
+                "is_active": true,
+                "current_balance": "7896.0000",
+                "created_at": "2026-07-13 12:58:25",
+                "updated_at": "2026-07-13 13:45:40"
+            }
+        ],
+        "appointments": [
+            {
+                "id": "6ba6427e-9e13-4308-b917-c42ade759d27",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "doctor_id": "c55fb303-d5e1-4e24-a55c-d44ce43eda85",
+                "patient_id": "744d79bb-7442-4b7c-a417-53df026655e9",
+                "appointment_type": "advance",
+                "status": "confirmed",
+                "appointment_date": "2026-07-13",
+                "token_number": 1,
+                "booked_at": "2026-07-13 12:59:16",
+                "arrived_at": "2026-07-13 12:59:45",
+                "completed_at": null,
+                "cancelled_at": null,
+                "cancel_reason": null,
+                "notes": null,
+                "created_by": "bf82f42d-d61f-4261-9db0-515abb4af841",
+                "created_at": "2026-07-13 12:59:16",
+                "updated_at": "2026-07-13 12:59:45"
+            }
+        ],
+        "patient_ledger_entries": [
+            {
+                "id": "5da5441f-7056-49f7-b00f-ad2200f020b4",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "patient_id": "744d79bb-7442-4b7c-a417-53df026655e9",
+                "appointment_id": null,
+                "entry_type": "advance",
+                "amount": "8000.0000",
+                "balance_after": "8000.0000",
+                "description": "Advance deposit: 3000 via cash, 5000 via bank_transfer",
+                "created_by": "bf82f42d-d61f-4261-9db0-515abb4af841",
+                "occurred_at": "2026-07-13 16:00:10"
+            },
+            {
+                "id": "d80c409f-7b15-4dd1-8cb5-4ace42ff977c",
+                "tenant_id": "b9a261ac-15ab-4b94-bef2-3ec70935a8d6",
+                "patient_id": "744d79bb-7442-4b7c-a417-53df026655e9",
+                "appointment_id": null,
+                "entry_type": "charge",
+                "amount": "-104.0000",
+                "balance_after": "7896.0000",
+                "description": "POS purchase — Invoice #INV-000001",
+                "created_by": "bf82f42d-d61f-4261-9db0-515abb4af841",
+                "occurred_at": "2026-07-13 16:45:40"
+            }
+        ],
+        "appointment_bills": [],
+        "appointment_bill_lines": [],
+        "appointment_bill_payments": []
+    }
+}

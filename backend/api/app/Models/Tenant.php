@@ -1,6 +1,8 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -8,9 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tenant extends Model
 {
-    protected $table = 'tenants';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'tenants';
 
     protected $fillable = [
         'id','name','base_currency','status','address','tax_number','logo_path','default_tax_template_id',

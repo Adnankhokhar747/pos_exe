@@ -7,6 +7,7 @@ use App\Http\Controllers\Platform\PlatformAuthController;
 use App\Http\Controllers\Platform\CompaniesController;
 use App\Http\Controllers\Platform\PlansController;
 use App\Http\Controllers\Platform\ModuleCatalogController;
+use App\Http\Controllers\Platform\CompanyBackupController;
 use App\Http\Controllers\Identity\BranchesController;
 use App\Http\Controllers\Identity\UsersController;
 use App\Http\Controllers\Identity\RolesController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\Settings\AccountingController;
 use App\Http\Controllers\Settings\TenantSettingsController;
 use App\Http\Controllers\Settings\TaxTemplatesController;
 use App\Http\Controllers\Settings\CurrenciesController;
+use App\Http\Controllers\Backup\BackupController;
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 Route::prefix('v1/auth')->group(function () {
@@ -67,12 +69,22 @@ Route::prefix('v1/platform')->middleware('platform.auth')->group(function () {
         Route::post('/', [CompaniesController::class, 'store']);
         Route::get('/{id}', [CompaniesController::class, 'show']);
         Route::patch('/{id}', [CompaniesController::class, 'update']);
+        Route::delete('/{id}', [CompaniesController::class, 'destroy']);
+        Route::patch('/{id}/activate', [CompaniesController::class, 'activate']);
+        Route::patch('/{id}/suspend', [CompaniesController::class, 'suspend']);
         Route::get('/{id}/subscription', [CompaniesController::class, 'getSubscription']);
         Route::patch('/{id}/subscription/plan', [CompaniesController::class, 'assignPlan']);
         Route::post('/{id}/subscription/renew', [CompaniesController::class, 'renewSubscription']);
         Route::get('/{id}/users', [CompaniesController::class, 'getUsers']);
         Route::get('/{id}/modules', [ModuleCatalogController::class, 'listForCompany']);
         Route::patch('/{id}/modules/{moduleCode}', [ModuleCatalogController::class, 'upsertForCompany']);
+
+        // ─── Cloud Backup (per company, platform admin) ───────────────────────
+        Route::get('/{id}/backup', [CompanyBackupController::class, 'show']);
+        Route::patch('/{id}/backup', [CompanyBackupController::class, 'update']);
+        Route::post('/{id}/backup/create', [CompanyBackupController::class, 'createSnapshot']);
+        Route::get('/{id}/backup/snapshots', [CompanyBackupController::class, 'snapshots']);
+        Route::get('/{id}/backup/snapshots/{snapshotId}/download', [CompanyBackupController::class, 'downloadSnapshot']);
     });
 });
 
@@ -127,7 +139,6 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
         Route::patch('/{id}', [CustomersController::class, 'update'])->middleware('permission:customer.manage');
         Route::get('/{id}/ledger', [CustomersController::class, 'ledger']);
         Route::get('/{id}/loyalty-transactions', [CustomersController::class, 'loyaltyTransactions']);
-        // Frontend sends POST /customers/{id}/payments (plural)
         Route::post('/{id}/payments', [CustomersController::class, 'recordPayment'])->middleware('permission:customer.manage');
         Route::post('/{id}/payment', [CustomersController::class, 'recordPayment'])->middleware('permission:customer.manage');
     });
@@ -234,7 +245,6 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
     Route::prefix('reports')->middleware('permission:report.view')->group(function () {
         Route::get('/sales-summary', [ReportsController::class, 'salesSummary']);
         Route::get('/stock-valuation', [ReportsController::class, 'stockValuation']);
-        // Frontend uses /inventory-valuation — alias to same handler
         Route::get('/inventory-valuation', [ReportsController::class, 'stockValuation']);
         Route::get('/top-products', [ReportsController::class, 'topProducts']);
         Route::get('/daily-closing-summary', [ReportsController::class, 'dailyClosingSummary']);
@@ -304,7 +314,6 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
 
         Route::get('/queue', [QueueController::class, 'queue']);
 
-        // Doctors
         Route::prefix('doctors')->group(function () {
             Route::get('/linkable-users', [DoctorsController::class, 'linkableUsers']);
             Route::get('/', [DoctorsController::class, 'index']);
@@ -317,7 +326,6 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::patch('/{id}/schedule', [DoctorsController::class, 'updateSchedule'])->middleware('permission:hospital.doctor.manage');
         });
 
-        // Patients
         Route::prefix('patients')->group(function () {
             Route::get('/', [PatientsController::class, 'index']);
             Route::post('/', [PatientsController::class, 'store'])->middleware('permission:hospital.patient.manage');
@@ -326,7 +334,6 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::delete('/{id}', [PatientsController::class, 'destroy'])->middleware('permission:hospital.patient.manage');
             Route::post('/{id}/advance', [PatientsController::class, 'recordAdvance'])->middleware('permission:hospital.appointment.manage');
             Route::post('/{id}/refund', [PatientsController::class, 'refund'])->middleware('permission:hospital.appointment.manage');
-            // Frontend sends POST /settle-treatment; backend method is settleTreatment
             Route::post('/{id}/settle-treatment', [PatientsController::class, 'settleTreatment'])->middleware('permission:hospital.appointment.manage');
             Route::post('/{id}/settle', [PatientsController::class, 'settleTreatment'])->middleware('permission:hospital.appointment.manage');
             Route::get('/{id}/ledger', [PatientsController::class, 'ledger']);
@@ -334,7 +341,6 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::get('/{id}/appointments', [PatientsController::class, 'appointments']);
         });
 
-        // Appointments
         Route::prefix('appointments')->group(function () {
             Route::get('/', [AppointmentsController::class, 'index']);
             Route::post('/', [AppointmentsController::class, 'store'])->middleware('permission:hospital.appointment.manage');
@@ -343,17 +349,29 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::get('/{id}/bill', [AppointmentBillingController::class, 'getBill']);
             Route::post('/{id}/bill/draft', [AppointmentBillingController::class, 'saveDraft'])->middleware('permission:hospital.appointment.manage');
             Route::post('/{id}/bill/finalize', [AppointmentBillingController::class, 'finalizeBill'])->middleware('permission:hospital.appointment.manage');
-            // Frontend aliases for billing
             Route::put('/{id}/bill', [AppointmentBillingController::class, 'saveDraft'])->middleware('permission:hospital.appointment.manage');
             Route::post('/{id}/bill', [AppointmentBillingController::class, 'finalizeBill'])->middleware('permission:hospital.appointment.manage');
         });
 
-        // Hospital Reports
         Route::prefix('reports')->middleware('permission:hospital.report.view')->group(function () {
             Route::get('/summary', [HospitalReportsController::class, 'summary']);
             Route::get('/daily-patients', [HospitalReportsController::class, 'dailyPatients']);
             Route::get('/monthly-patients', [HospitalReportsController::class, 'monthlyPatients']);
             Route::get('/revenue', [HospitalReportsController::class, 'revenue']);
         });
+    });
+
+    // ─── Cloud Backup (tenant-facing) ─────────────────────────────────────────
+    Route::prefix('backup')->group(function () {
+        Route::get('/status', [BackupController::class, 'status']);
+        // Local backup — free, no server storage, no permission gate
+        Route::get('/export', [BackupController::class, 'export']);
+        // Cloud backup — server-stored snapshots, requires settings.manage
+        Route::post('/create', [BackupController::class, 'create'])->middleware('permission:settings.manage');
+        Route::get('/snapshots', [BackupController::class, 'snapshots']);
+        Route::get('/snapshots/{id}/download', [BackupController::class, 'download'])->middleware('permission:settings.manage');
+        Route::post('/snapshots/{id}/restore', [BackupController::class, 'restore'])->middleware('permission:settings.manage');
+        Route::post('/import', [BackupController::class, 'import'])->middleware('permission:settings.manage');
+        Route::delete('/snapshots/{id}', [BackupController::class, 'deleteSnapshot'])->middleware('permission:settings.manage');
     });
 });

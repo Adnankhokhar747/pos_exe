@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class PlatformAdmin extends Model
 {
-    protected $table = 'platform_admins';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'platform_admins';
     public $timestamps = false;
 
     protected $fillable = ['id','username','email','full_name','password_hash'];

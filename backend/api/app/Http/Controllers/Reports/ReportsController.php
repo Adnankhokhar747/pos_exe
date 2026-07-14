@@ -41,9 +41,10 @@ class ReportsController extends Controller
         }
 
         return response()->json([
-            'totalRevenue'      => $totalRevenue,
-            'totalDiscount'     => $totalDiscount,
-            'totalTax'          => $totalTax,
+            'grossSales'        => $totalRevenue,
+            'discounts'         => $totalDiscount,
+            'taxCollected'      => $totalTax,
+            'netSales'          => max(0, $totalRevenue - $totalDiscount),
             'invoiceCount'      => $invoiceCount,
             'paymentBreakdown'  => $paymentBreakdown,
             'from'              => $from,
@@ -63,18 +64,17 @@ class ReportsController extends Controller
             ->whereNull('p.deleted_at')
             ->select(
                 'p.id as product_id',
-                'p.name as product_name',
+                'p.name as name',
                 'p.sku',
-                'sl.warehouse_id',
                 'sl.quantity_on_hand',
                 'p.cost_price',
-                DB::raw('sl.quantity_on_hand * p.cost_price as total_value')
+                DB::raw('sl.quantity_on_hand * p.cost_price as value')
             )
             ->get();
 
         return response()->json([
-            'items'       => $stockData,
-            'totalValue'  => $stockData->sum('total_value'),
+            'lines' => $stockData,
+            'total' => $stockData->sum('value'),
         ]);
     }
 
@@ -93,13 +93,13 @@ class ReportsController extends Controller
             ->whereBetween('i.created_at', [$from, $to])
             ->select(
                 'p.id as product_id',
-                'p.name as product_name',
+                'p.name as name',
                 'p.sku',
-                DB::raw('SUM(il.quantity) as total_qty'),
-                DB::raw('SUM(il.line_total) as total_revenue')
+                DB::raw('SUM(il.quantity) as quantity_sold'),
+                DB::raw('SUM(il.line_total) as revenue')
             )
             ->groupBy('p.id', 'p.name', 'p.sku')
-            ->orderByDesc('total_revenue')
+            ->orderByDesc('revenue')
             ->limit(20)
             ->get();
 
@@ -119,7 +119,7 @@ class ReportsController extends Controller
             ->whereRaw('sl.quantity_on_hand <= p.reorder_level')
             ->select(
                 'p.id as product_id',
-                'p.name as product_name',
+                'p.name as name',
                 'p.sku',
                 'p.reorder_level',
                 'sl.warehouse_id',

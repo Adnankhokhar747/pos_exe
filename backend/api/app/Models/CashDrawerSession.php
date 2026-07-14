@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class CashDrawerSession extends Model
 {
-    protected $table = 'cash_drawer_sessions';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'cash_drawer_sessions';
     public $timestamps = false;
 
     protected $fillable = [

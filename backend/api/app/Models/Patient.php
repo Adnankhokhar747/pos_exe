@@ -1,6 +1,8 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -8,9 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Patient extends Model
 {
-    protected $table = 'patients';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'patients';
 
     protected $fillable = [
         'id','tenant_id','name','phone','gender','date_of_birth','address','is_active','current_balance',

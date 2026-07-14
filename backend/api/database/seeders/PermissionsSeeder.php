@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PermissionsSeeder extends Seeder
 {
@@ -70,15 +71,20 @@ class PermissionsSeeder extends Seeder
     public function run(): void
     {
         foreach (self::PERMISSION_CATALOG as $p) {
-            DB::table('permissions')->updateOrInsert(
-                ['code' => $p['code']],
-                [
-                    'id'          => DB::raw("COALESCE((SELECT id FROM permissions WHERE code = '{$p['code']}'), gen_random_uuid())"),
+            $exists = DB::table('permissions')->where('code', $p['code'])->exists();
+            if ($exists) {
+                DB::table('permissions')->where('code', $p['code'])->update([
+                    'module'      => $p['module'],
+                    'description' => $p['description'],
+                ]);
+            } else {
+                DB::table('permissions')->insert([
+                    'id'          => (string) Str::uuid(),
                     'code'        => $p['code'],
                     'module'      => $p['module'],
                     'description' => $p['description'],
-                ]
-            );
+                ]);
+            }
         }
 
         $this->command->info('Permissions seeded: ' . count(self::PERMISSION_CATALOG));

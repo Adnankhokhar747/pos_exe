@@ -1,0 +1,2 @@
+This file tells the app to use the live PHP server instead of embedded local services.
+Server: https://posvan.taqaantech.com

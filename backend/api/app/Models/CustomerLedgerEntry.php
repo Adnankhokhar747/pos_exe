@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class CustomerLedgerEntry extends Model
 {
-    protected $table = 'customer_ledger_entries';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'customer_ledger_entries';
     public $timestamps = false;
 
     protected $fillable = [

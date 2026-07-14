@@ -1,12 +1,16 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
+  Chip,
+  CircularProgress,
   FormControlLabel,
   MenuItem,
   Snackbar,
   Stack,
+  Switch,
   Tab,
   Tabs,
   TextField,
@@ -14,7 +18,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '../api/client';
-import type { Currency, ExchangeRate, Printer, PrinterType, ReceiptSettings, Role, TaxTemplate, TenantSettings, TenantUser } from '../api/types';
+import type { BackupSnapshotMeta, BackupStatus, Currency, ExchangeRate, Printer, PrinterType, ReceiptSettings, Role, TaxTemplate, TenantSettings, TenantUser } from '../api/types';
 import { DataTable } from '../components/DataTable';
 import { AppModal } from '../components/AppModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -221,7 +225,13 @@ export function SettingsPage(): JSX.Element {
     mutationFn: () =>
       apiFetch('/api/v1/users', {
         method: 'POST',
-        body: JSON.stringify({ ...userForm, email: userForm.email || undefined }),
+        body: JSON.stringify({
+          fullName: userForm.fullName,
+          username: userForm.username,
+          email: userForm.email || undefined,
+          password: userForm.password,
+          roleIds: userForm.roleId ? [userForm.roleId] : [],
+        }),
       }),
     onSuccess: () => {
       setSnackbar('User created.');
@@ -233,16 +243,22 @@ export function SettingsPage(): JSX.Element {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: () =>
-      apiFetch(`/api/v1/users/${editUserTarget?.id}`, {
+    mutationFn: async () => {
+      await apiFetch(`/api/v1/users/${editUserTarget?.id}`, {
         method: 'PATCH',
         body: JSON.stringify({
           fullName: editUserForm.fullName,
           email: editUserForm.email || undefined,
-          roleId: editUserForm.roleId,
-          ...(editUserForm.password ? { password: editUserForm.password } : {}),
+          roleIds: editUserForm.roleId ? [editUserForm.roleId] : [],
         }),
-      }),
+      });
+      if (editUserForm.password) {
+        await apiFetch(`/api/v1/users/${editUserTarget?.id}/change-password`, {
+          method: 'POST',
+          body: JSON.stringify({ newPassword: editUserForm.password }),
+        });
+      }
+    },
     onSuccess: () => {
       setSnackbar('User updated.');
       setEditUserTarget(null);
@@ -271,7 +287,7 @@ export function SettingsPage(): JSX.Element {
       username: targetUser.username,
       email: targetUser.email ?? '',
       password: '',
-      roleId: targetUser.userRoles[0]?.role.id ?? '',
+      roleId: (targetUser.roles ?? [])[0]?.id ?? '',
     });
   }
 
@@ -406,6 +422,7 @@ export function SettingsPage(): JSX.Element {
         <Tab label="Printing" />
         <Tab label="Company" />
         {canManageUsers && <Tab label="Users & Roles" />}
+        <Tab label="Backup" />
       </Tabs>
 
       {tab === 0 && (
@@ -421,6 +438,9 @@ export function SettingsPage(): JSX.Element {
               value={defaultCurrency}
               onChange={(e) => setDefaultCurrency(e.target.value)}
             >
+              {defaultCurrency && !(currenciesQuery.data ?? []).some((c) => c.code === defaultCurrency) && (
+                <MenuItem value={defaultCurrency}>{defaultCurrency}</MenuItem>
+              )}
               {(currenciesQuery.data ?? []).map((currency) => (
                 <MenuItem key={currency.code} value={currency.code}>
                   {currency.code} — {currency.name}
@@ -445,18 +465,23 @@ export function SettingsPage(): JSX.Element {
           <Stack direction="row" spacing={2} mb={3} flexWrap="wrap">
             <TextField
               label="Code"
-              sx={{ width: 100 }}
+              sx={{ width: 110 }}
+              inputProps={{ maxLength: 10 }}
+              helperText="e.g. PKR, RS, USD"
               value={currencyForm.code}
               onChange={(e) => setCurrencyForm({ ...currencyForm, code: e.target.value.toUpperCase() })}
             />
             <TextField
               label="Name"
+              helperText="e.g. Pakistani Rupee"
               value={currencyForm.name}
               onChange={(e) => setCurrencyForm({ ...currencyForm, name: e.target.value })}
             />
             <TextField
               label="Symbol"
-              sx={{ width: 100 }}
+              sx={{ width: 110 }}
+              inputProps={{ maxLength: 10 }}
+              helperText="e.g. Rs, ₨, $"
               value={currencyForm.symbol}
               onChange={(e) => setCurrencyForm({ ...currencyForm, symbol: e.target.value })}
             />
@@ -794,7 +819,7 @@ export function SettingsPage(): JSX.Element {
             columns={[
               { key: 'fullName', label: 'Name', sortable: true, render: (u) => u.fullName },
               { key: 'username', label: 'Username', sortable: true, render: (u) => u.username },
-              { key: 'role', label: 'Role', render: (u) => u.userRoles[0]?.role.name ?? '—' },
+              { key: 'role', label: 'Role', render: (u) => (u.roles ?? [])[0]?.name ?? '—' },
               {
                 key: 'status',
                 label: 'Status',
@@ -861,6 +886,7 @@ export function SettingsPage(): JSX.Element {
             onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
           />
           <TextField select label="Role" value={userForm.roleId} onChange={(e) => setUserForm({ ...userForm, roleId: e.target.value })}>
+            <MenuItem value="">Select a role…</MenuItem>
             {(rolesQuery.data ?? []).map((role) => (
               <MenuItem key={role.id} value={role.id}>
                 {role.name}
@@ -913,6 +939,9 @@ export function SettingsPage(): JSX.Element {
             value={editUserForm.roleId}
             onChange={(e) => setEditUserForm({ ...editUserForm, roleId: e.target.value })}
           >
+            {editUserForm.roleId && !(rolesQuery.data ?? []).some((r) => r.id === editUserForm.roleId) && (
+              <MenuItem value={editUserForm.roleId}>Loading…</MenuItem>
+            )}
             {(rolesQuery.data ?? []).map((role) => (
               <MenuItem key={role.id} value={role.id}>
                 {role.name}
@@ -1018,7 +1047,374 @@ export function SettingsPage(): JSX.Element {
         onCancel={() => setDeletePrinterTarget(null)}
       />
 
+      {tab === (canManageUsers ? 5 : 4) && <CloudBackupTab setSnackbar={setSnackbar} />}
+
       <Snackbar open={Boolean(snackbar)} autoHideDuration={3000} onClose={() => setSnackbar(null)} message={snackbar} />
+    </Box>
+  );
+}
+
+// ─── Backup Tab ───────────────────────────────────────────────────────────────
+
+const LOCAL_BACKUP_AUTO_KEY = 'vantage.localBackup.autoEnabled';
+const LOCAL_BACKUP_LAST_KEY = 'vantage.localBackup.lastAt';
+const LOCAL_BACKUP_INTERVAL_DAYS = 2;
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function downloadBlobFromApi(url: string, filename: string, token: string | null): void {
+  fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    .then((r) => {
+      if (!r.ok) throw new Error('Download failed');
+      return r.blob();
+    })
+    .then((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    });
+}
+
+function CloudBackupTab({ setSnackbar }: { setSnackbar: (msg: string) => void }): JSX.Element {
+  const queryClient = useQueryClient();
+  const restoreFileRef = useRef<HTMLInputElement>(null);
+  const [restoreTarget, setRestoreTarget] = useState<BackupSnapshotMeta | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState(false);
+  const [autoLocal, setAutoLocal] = useState(
+    () => localStorage.getItem(LOCAL_BACKUP_AUTO_KEY) === 'true',
+  );
+  const [lastLocalAt, setLastLocalAt] = useState<string | null>(
+    () => localStorage.getItem(LOCAL_BACKUP_LAST_KEY),
+  );
+  const [localBusy, setLocalBusy] = useState(false);
+
+  const base  = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:4000';
+  const token = localStorage.getItem('vantage.accessToken');
+
+  const statusQuery = useQuery({
+    queryKey: ['backup-status'],
+    queryFn: () => apiFetch<BackupStatus>('/api/v1/backup/status'),
+  });
+
+  const snapshotsQuery = useQuery({
+    queryKey: ['backup-snapshots'],
+    queryFn: () => apiFetch<BackupSnapshotMeta[]>('/api/v1/backup/snapshots'),
+    enabled: statusQuery.data?.enabled === true,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => apiFetch('/api/v1/backup/create', { method: 'POST', body: JSON.stringify({}) }),
+    onSuccess: () => {
+      setSnackbar('Cloud backup created.');
+      queryClient.invalidateQueries({ queryKey: ['backup-status'] });
+      queryClient.invalidateQueries({ queryKey: ['backup-snapshots'] });
+    },
+    onError: (e) => setSnackbar(e instanceof ApiError ? e.detail : 'Cloud backup failed.'),
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/api/v1/backup/snapshots/${id}/restore`, { method: 'POST', body: JSON.stringify({}) }),
+    onSuccess: () => {
+      setSnackbar('Restore completed. Please refresh the app.');
+      setRestoreTarget(null);
+      setConfirmRestore(false);
+    },
+    onError: (e) => {
+      setSnackbar(e instanceof ApiError ? e.detail : 'Restore failed.');
+      setConfirmRestore(false);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/v1/backup/snapshots/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      setSnackbar('Snapshot deleted.');
+      queryClient.invalidateQueries({ queryKey: ['backup-snapshots'] });
+      queryClient.invalidateQueries({ queryKey: ['backup-status'] });
+    },
+    onError: (e) => setSnackbar(e instanceof ApiError ? e.detail : 'Delete failed.'),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch(`${base}/api/v1/backup/import`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new ApiError(res.status, err.message ?? 'Restore failed.');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setSnackbar('Restore completed. Please refresh the app.');
+      queryClient.invalidateQueries({ queryKey: ['backup-status'] });
+      queryClient.invalidateQueries({ queryKey: ['backup-snapshots'] });
+    },
+    onError: (e) => setSnackbar(e instanceof ApiError ? e.detail : 'Restore failed.'),
+  });
+
+  // Auto local backup: on mount, check if 2 days have passed
+  useEffect(() => {
+    if (!autoLocal) return;
+    const last = lastLocalAt ? new Date(lastLocalAt).getTime() : 0;
+    const daysSince = (Date.now() - last) / (1000 * 60 * 60 * 24);
+    if (daysSince >= LOCAL_BACKUP_INTERVAL_DAYS) {
+      handleLocalDownload(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleLocalDownload(silent = false): void {
+    setLocalBusy(true);
+    const now = new Date().toISOString();
+    const filename = `local-backup-${now.slice(0, 10)}.json`;
+    downloadBlobFromApi(`${base}/api/v1/backup/export`, filename, token);
+    localStorage.setItem(LOCAL_BACKUP_LAST_KEY, now);
+    setLastLocalAt(now);
+    setLocalBusy(false);
+    if (!silent) setSnackbar('Local backup downloaded.');
+  }
+
+  function toggleAutoLocal(checked: boolean): void {
+    setAutoLocal(checked);
+    localStorage.setItem(LOCAL_BACKUP_AUTO_KEY, String(checked));
+  }
+
+  if (statusQuery.isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  const status = statusQuery.data;
+  const cloudEnabled = status?.enabled === true;
+
+  return (
+    <Box maxWidth={700}>
+
+      {/* ── SECTION 1: Local Backup (always free) ── */}
+      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+        Local Backup
+      </Typography>
+      <Typography variant="body2" color="text.secondary" mb={2}>
+        Download your entire company data as a single JSON file to your computer. Free — always
+        available. If your PC crashes or you reinstall the app, upload this file to restore all
+        your data instantly.
+      </Typography>
+
+      <Box border={1} borderColor="divider" borderRadius={1.5} p={2} mb={1}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+          <Box>
+            <Typography variant="body2" color="text.secondary">Last local backup</Typography>
+            <Typography variant="body1">
+              {lastLocalAt ? new Date(lastLocalAt).toLocaleString() : 'Never'}
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Switch
+              size="small"
+              checked={autoLocal}
+              onChange={(e) => toggleAutoLocal(e.target.checked)}
+            />
+            <Typography variant="body2">Auto-backup every {LOCAL_BACKUP_INTERVAL_DAYS} days</Typography>
+          </Stack>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              size="small"
+              disabled={localBusy}
+              onClick={() => handleLocalDownload(false)}
+            >
+              Download Backup Now
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={importMutation.isPending}
+              onClick={() => restoreFileRef.current?.click()}
+            >
+              {importMutation.isPending ? 'Restoring…' : 'Restore from File'}
+            </Button>
+            <input
+              ref={restoreFileRef}
+              type="file"
+              accept=".json,application/json"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) importMutation.mutate(file);
+                e.target.value = '';
+              }}
+            />
+          </Stack>
+        </Stack>
+      </Box>
+
+      <Typography variant="caption" color="text.secondary" display="block" mb={4}>
+        After reinstalling: open the app → log in → Settings → Backup → "Restore from File" and select
+        your downloaded .json file.
+      </Typography>
+
+      {/* ── SECTION 2: Cloud Backup (paid, superadmin-enabled) ── */}
+      <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
+        <Typography variant="subtitle1" fontWeight={600}>
+          Cloud Backup
+        </Typography>
+        <Chip
+          size="small"
+          label={cloudEnabled ? 'Enabled' : 'Not Enabled'}
+          color={cloudEnabled ? 'success' : 'default'}
+        />
+      </Stack>
+      <Typography variant="body2" color="text.secondary" mb={2}>
+        When enabled by your administrator, your data is also saved securely on our server. You can
+        restore any cloud snapshot even after a complete reinstall without needing the local file.
+      </Typography>
+
+      {!cloudEnabled ? (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Cloud backup is not enabled for your account. Contact your platform administrator to activate
+          this paid feature.
+        </Alert>
+      ) : (
+        <>
+          {/* Cloud status card */}
+          <Box border={1} borderColor="divider" borderRadius={1.5} p={2} mb={2}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Last cloud backup</Typography>
+                <Typography variant="body1">
+                  {status?.lastBackedUpAt ? new Date(status.lastBackedUpAt).toLocaleString() : 'Never'}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" color="text.secondary">Snapshots</Typography>
+                <Typography variant="body1">{status?.snapshotCount ?? 0} / {status?.maxSnapshots ?? 10}</Typography>
+              </Box>
+              <Button
+                variant="contained"
+                size="small"
+                disabled={createMutation.isPending}
+                onClick={() => createMutation.mutate()}
+              >
+                {createMutation.isPending ? 'Backing up…' : 'Create Cloud Backup'}
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Restore confirmation */}
+          {confirmRestore && restoreTarget && (
+            <Alert
+              severity="warning"
+              sx={{ mb: 2 }}
+              action={
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    color="inherit"
+                    disabled={restoreMutation.isPending}
+                    onClick={() => restoreMutation.mutate(restoreTarget.id)}
+                  >
+                    {restoreMutation.isPending ? 'Restoring…' : 'Yes, Restore'}
+                  </Button>
+                  <Button size="small" color="inherit" onClick={() => { setConfirmRestore(false); setRestoreTarget(null); }}>
+                    Cancel
+                  </Button>
+                </Stack>
+              }
+            >
+              Restore from <strong>{restoreTarget.label}</strong>? This replaces all current data and
+              cannot be undone.
+            </Alert>
+          )}
+
+          {/* Cloud snapshot list */}
+          <Typography variant="subtitle2" gutterBottom>Cloud Snapshots</Typography>
+          {snapshotsQuery.isLoading ? (
+            <CircularProgress size={24} />
+          ) : (snapshotsQuery.data ?? []).length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No cloud snapshots yet. Click "Create Cloud Backup" to save one.
+            </Typography>
+          ) : (
+            <Stack spacing={1}>
+              {(snapshotsQuery.data ?? []).map((snap) => (
+                <Box
+                  key={snap.id}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  border={1}
+                  borderColor="divider"
+                  borderRadius={1}
+                  px={2}
+                  py={1}
+                  flexWrap="wrap"
+                  gap={1}
+                >
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Chip label={`v${snap.version}`} size="small" />
+                    <Box>
+                      <Typography variant="body2">{snap.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(snap.createdAt).toLocaleString()} · {formatBytes(snap.sizeBytes)}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() =>
+                        downloadBlobFromApi(
+                          `${base}/api/v1/backup/snapshots/${snap.id}/download`,
+                          `cloud-backup-v${snap.version}.json`,
+                          token,
+                        )
+                      }
+                    >
+                      Download
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      onClick={() => { setRestoreTarget(snap); setConfirmRestore(true); }}
+                    >
+                      Restore
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => deleteMutation.mutate(snap.id)}
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                </Box>
+              ))}
+            </Stack>
+          )}
+        </>
+      )}
     </Box>
   );
 }

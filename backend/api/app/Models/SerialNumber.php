@@ -1,15 +1,16 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SerialNumber extends Model
 {
-    protected $table = 'serial_numbers';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'serial_numbers';
     public $timestamps = false;
 
     protected $fillable = [

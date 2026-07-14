@@ -1,15 +1,16 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PurchaseOrderLine extends Model
 {
-    protected $table = 'purchase_order_lines';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'purchase_order_lines';
     public $timestamps = false;
 
     protected $fillable = [

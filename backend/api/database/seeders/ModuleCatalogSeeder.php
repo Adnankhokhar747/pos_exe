@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ModuleCatalogSeeder extends Seeder
 {
@@ -19,16 +20,23 @@ class ModuleCatalogSeeder extends Seeder
         ];
 
         foreach ($modules as $m) {
-            DB::table('module_catalog')->updateOrInsert(
-                ['code' => $m['code']],
-                [
-                    'id'          => DB::raw("COALESCE((SELECT id FROM module_catalog WHERE code = '{$m['code']}'), gen_random_uuid())"),
+            $exists = DB::table('module_catalog')->where('code', $m['code'])->exists();
+            if ($exists) {
+                DB::table('module_catalog')->where('code', $m['code'])->update([
+                    'name'        => $m['name'],
+                    'description' => $m['description'],
+                    'is_active'   => $m['is_active'],
+                ]);
+            } else {
+                DB::table('module_catalog')->insert([
+                    'id'          => (string) Str::uuid(),
                     'code'        => $m['code'],
                     'name'        => $m['name'],
                     'description' => $m['description'],
                     'is_active'   => $m['is_active'],
-                ]
-            );
+                    'created_at'  => now(),
+                ]);
+            }
         }
 
         $this->command->info('Module catalog seeded: ' . count($modules) . ' module(s)');

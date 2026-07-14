@@ -1,5 +1,6 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { setAccessToken, getAccessToken } from '../api/client';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Box, CircularProgress } from '@mui/material';
+import { setAccessToken, getAccessToken, apiFetch } from '../api/client';
 import type { PlatformAdmin } from '../api/types';
 
 interface AuthContextValue {
@@ -13,6 +14,23 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
   const [admin, setAdmin] = useState<PlatformAdmin | null>(null);
+  // True while we're checking the stored token — prevents a flash to /login on refresh
+  const [bootstrapping, setBootstrapping] = useState(() => Boolean(getAccessToken()));
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      setBootstrapping(false);
+      return;
+    }
+    // Token exists — verify it and restore the admin object
+    apiFetch<PlatformAdmin>('/api/v1/platform/auth/me')
+      .then((me) => setAdmin(me))
+      .catch(() => {
+        // Token is expired or invalid — clear it
+        setAccessToken(null);
+      })
+      .finally(() => setBootstrapping(false));
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -29,6 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     }),
     [admin],
   );
+
+  if (bootstrapping) {
+    return (
+      <Box display="flex" alignItems="center" justifyContent="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

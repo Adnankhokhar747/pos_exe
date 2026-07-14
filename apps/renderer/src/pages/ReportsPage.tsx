@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Card, Stack, Tab, Table, TableBody, TableCell, TableRow, Tabs, TextField, Typography } from '@mui/material';
+import { Box, Card, CircularProgress, Stack, Tab, Table, TableBody, TableCell, TableRow, Tabs, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../api/client';
 import type { InventoryValuation, InventoryValuationLine, LowStockLine, SalesSummary, TopProduct } from '../api/types';
@@ -81,105 +81,133 @@ export function ReportsPage(): JSX.Element {
         </Stack>
       )}
 
-      {tab === 0 && salesSummaryQuery.data && (
-        <Card variant="outlined" sx={{ maxWidth: 420 }}>
-          <Table size="small">
-            <TableBody>
-              <TableRow>
-                <TableCell>Gross Sales</TableCell>
-                <TableCell align="right">${Number(salesSummaryQuery.data.grossSales).toFixed(2)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Discounts</TableCell>
-                <TableCell align="right">${Number(salesSummaryQuery.data.discounts).toFixed(2)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Tax Collected</TableCell>
-                <TableCell align="right">${Number(salesSummaryQuery.data.taxCollected).toFixed(2)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>
-                  <strong>Net Sales</strong>
-                </TableCell>
-                <TableCell align="right">
-                  <strong>${Number(salesSummaryQuery.data.netSales).toFixed(2)}</strong>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </Card>
+      {tab === 0 && (
+        salesSummaryQuery.isLoading ? (
+          <CircularProgress />
+        ) : salesSummaryQuery.isError ? (
+          <Typography color="error">Failed to load sales summary. Please try again.</Typography>
+        ) : salesSummaryQuery.data ? (
+          <Card variant="outlined" sx={{ maxWidth: 420 }}>
+            <Table size="small">
+              <TableBody>
+                <TableRow>
+                  <TableCell>Gross Sales</TableCell>
+                  <TableCell align="right">{Number(salesSummaryQuery.data.grossSales).toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Discounts</TableCell>
+                  <TableCell align="right">{Number(salesSummaryQuery.data.discounts).toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Tax Collected</TableCell>
+                  <TableCell align="right">{Number(salesSummaryQuery.data.taxCollected).toFixed(2)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    <strong>Net Sales</strong>
+                  </TableCell>
+                  <TableCell align="right">
+                    <strong>{Number(salesSummaryQuery.data.netSales).toFixed(2)}</strong>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Card>
+        ) : (
+          <Typography color="text.secondary">No sales data for this period.</Typography>
+        )
       )}
 
       {tab === 1 && (
-        <DataTable
-          searchPlaceholder="Search products…"
-          emptyMessage="No sales in this date range."
-          getRowId={(p: TopProduct) => p.productId}
-          rows={topProductsQuery.data ?? []}
-          getSearchText={(p) => p.name}
-          columns={[
-            { key: 'name', label: 'Product', sortable: true, render: (p) => p.name },
-            { key: 'quantitySold', label: 'Quantity Sold', align: 'right', sortable: true, render: (p) => p.quantitySold },
-            {
-              key: 'revenue',
-              label: 'Revenue',
-              align: 'right',
-              sortable: true,
-              sortValue: (p) => Number(p.revenue),
-              render: (p) => `$${Number(p.revenue).toFixed(2)}`,
-            },
-          ]}
-        />
-      )}
-
-      {tab === 2 && valuationQuery.data && (
-        <>
+        topProductsQuery.isLoading ? (
+          <CircularProgress />
+        ) : topProductsQuery.isError ? (
+          <Typography color="error">Failed to load top products. Please try again.</Typography>
+        ) : (
           <DataTable
             searchPlaceholder="Search products…"
-            emptyMessage="No inventory on hand."
-            getRowId={(l: InventoryValuationLine) => l.productId}
-            rows={valuationQuery.data.lines}
+            emptyMessage="No sales in this date range."
+            getRowId={(p: TopProduct) => p.productId}
+            rows={topProductsQuery.data ?? []}
+            getSearchText={(p) => p.name}
+            columns={[
+              { key: 'name', label: 'Product', sortable: true, render: (p) => p.name },
+              { key: 'quantitySold', label: 'Quantity Sold', align: 'right', sortable: true, render: (p) => p.quantitySold },
+              {
+                key: 'revenue',
+                label: 'Revenue',
+                align: 'right',
+                sortable: true,
+                sortValue: (p) => Number(p.revenue),
+                render: (p) => Number(p.revenue).toFixed(2),
+              },
+            ]}
+          />
+        )
+      )}
+
+      {tab === 2 && (
+        valuationQuery.isLoading ? (
+          <CircularProgress />
+        ) : valuationQuery.isError ? (
+          <Typography color="error">Failed to load inventory valuation. Please try again.</Typography>
+        ) : valuationQuery.data ? (
+          <>
+            <DataTable
+              searchPlaceholder="Search products…"
+              emptyMessage="No inventory on hand."
+              getRowId={(l: InventoryValuationLine) => l.productId}
+              rows={valuationQuery.data.lines}
+              getSearchText={(l) => l.name}
+              columns={[
+                { key: 'name', label: 'Product', sortable: true, render: (l) => l.name },
+                { key: 'quantityOnHand', label: 'On Hand', align: 'right', sortable: true, render: (l) => l.quantityOnHand },
+                {
+                  key: 'costPrice',
+                  label: 'Cost Price',
+                  align: 'right',
+                  sortable: true,
+                  sortValue: (l) => Number(l.costPrice),
+                  render: (l) => Number(l.costPrice).toFixed(2),
+                },
+                {
+                  key: 'value',
+                  label: 'Value',
+                  align: 'right',
+                  sortable: true,
+                  sortValue: (l) => Number(l.value),
+                  render: (l) => Number(l.value).toFixed(2),
+                },
+              ]}
+            />
+            <Typography variant="h6" mt={2}>
+              Total: {Number(valuationQuery.data.total).toFixed(2)}
+            </Typography>
+          </>
+        ) : (
+          <Typography color="text.secondary">No inventory data available.</Typography>
+        )
+      )}
+
+      {tab === 3 && (
+        lowStockQuery.isLoading ? (
+          <CircularProgress />
+        ) : lowStockQuery.isError ? (
+          <Typography color="error">Failed to load low stock report. Please try again.</Typography>
+        ) : (
+          <DataTable
+            searchPlaceholder="Search products…"
+            emptyMessage="No products below reorder level."
+            getRowId={(l: LowStockLine) => l.productId}
+            rows={lowStockQuery.data ?? []}
             getSearchText={(l) => l.name}
             columns={[
               { key: 'name', label: 'Product', sortable: true, render: (l) => l.name },
               { key: 'quantityOnHand', label: 'On Hand', align: 'right', sortable: true, render: (l) => l.quantityOnHand },
-              {
-                key: 'costPrice',
-                label: 'Cost Price',
-                align: 'right',
-                sortable: true,
-                sortValue: (l) => Number(l.costPrice),
-                render: (l) => `$${Number(l.costPrice).toFixed(2)}`,
-              },
-              {
-                key: 'value',
-                label: 'Value',
-                align: 'right',
-                sortable: true,
-                sortValue: (l) => Number(l.value),
-                render: (l) => `$${Number(l.value).toFixed(2)}`,
-              },
+              { key: 'reorderLevel', label: 'Reorder Level', align: 'right', sortable: true, render: (l) => l.reorderLevel },
             ]}
           />
-          <Typography variant="h6" mt={2}>
-            Total: ${Number(valuationQuery.data.total).toFixed(2)}
-          </Typography>
-        </>
-      )}
-
-      {tab === 3 && (
-        <DataTable
-          searchPlaceholder="Search products…"
-          emptyMessage="No products below reorder level."
-          getRowId={(l: LowStockLine) => l.productId}
-          rows={lowStockQuery.data ?? []}
-          getSearchText={(l) => l.name}
-          columns={[
-            { key: 'name', label: 'Product', sortable: true, render: (l) => l.name },
-            { key: 'quantityOnHand', label: 'On Hand', align: 'right', sortable: true, render: (l) => l.quantityOnHand },
-            { key: 'reorderLevel', label: 'Reorder Level', align: 'right', sortable: true, render: (l) => l.reorderLevel },
-          ]}
-        />
+        )
       )}
     </Box>
   );

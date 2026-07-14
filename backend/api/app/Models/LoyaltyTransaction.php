@@ -1,14 +1,15 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 
 class LoyaltyTransaction extends Model
 {
-    protected $table = 'loyalty_transactions';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'loyalty_transactions';
     public $timestamps = false;
 
     protected $fillable = [

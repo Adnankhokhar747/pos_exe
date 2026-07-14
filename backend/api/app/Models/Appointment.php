@@ -1,6 +1,8 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,9 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Appointment extends Model
 {
-    protected $table = 'appointments';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'appointments';
 
     protected $fillable = [
         'id','tenant_id','doctor_id','patient_id','appointment_type','status',

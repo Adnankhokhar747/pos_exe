@@ -22,13 +22,112 @@ class CompaniesController extends Controller
 {
     public function index(Request $request)
     {
-        return Tenant::with('subscription.plan')
+        $tenants = Tenant::with('subscription.plan')
             ->when($request->search, fn($q, $s) =>
                 $q->where('name', 'ilike', "%{$s}%")
             )
             ->orderBy('name')
             ->limit(200)
             ->get();
+
+        // Batch-load counts for all tenants to avoid N+1
+        $tenantIds = $tenants->pluck('id');
+        $userCounts   = DB::table('users')->whereIn('tenant_id', $tenantIds)
+            ->select('tenant_id', DB::raw('count(*) as cnt'))->groupBy('tenant_id')->pluck('cnt', 'tenant_id');
+        $branchCounts = DB::table('branches')->whereIn('tenant_id', $tenantIds)
+            ->select('tenant_id', DB::raw('count(*) as cnt'))->groupBy('tenant_id')->pluck('cnt', 'tenant_id');
+        // invoices link through branch_id → branches.tenant_id
+        $invoiceCounts = DB::table('invoices')
+            ->join('branches', 'branches.id', '=', 'invoices.branch_id')
+            ->whereIn('branches.tenant_id', $tenantIds)
+            ->select('branches.tenant_id', DB::raw('count(*) as cnt'))
+            ->groupBy('branches.tenant_id')->pluck('cnt', 'branches.tenant_id');
+
+        return $tenants->map(fn($t) => $this->formatCompany($t, $userCounts[$t->id] ?? 0, $invoiceCounts[$t->id] ?? 0, $branchCounts[$t->id] ?? 0));
+    }
+
+    private function formatCompany(Tenant $tenant, int $userCount = 0, int $invoiceCount = 0, int $branchCount = 0): array
+    {
+        $sub  = $tenant->subscription;
+        $plan = $sub?->plan;
+
+        $subscriptionStatus = $sub?->status ?? 'cancelled';
+        $expiryDate = $sub?->expiry_date ? Carbon::parse($sub->expiry_date) : null;
+        $gracePeriodDays = $sub?->grace_period_days ?? 7;
+
+        $now = Carbon::now();
+        $daysUntilExpiry = $expiryDate ? (int) $now->diffInDays($expiryDate, false) : -9999;
+        $inGracePeriod = $daysUntilExpiry < 0 && $daysUntilExpiry >= -$gracePeriodDays;
+        $pastGrace = $daysUntilExpiry < -$gracePeriodDays;
+
+        $tenantActive = $tenant->status === 'active';
+        $blocked = !$tenantActive || ($subscriptionStatus !== 'active' && !$inGracePeriod) || $pastGrace;
+
+        if (!$tenantActive) {
+            $warningLevel = 'critical';
+        } elseif ($pastGrace || $subscriptionStatus === 'expired') {
+            $warningLevel = 'critical';
+        } elseif ($inGracePeriod) {
+            $warningLevel = 'critical';
+        } elseif ($daysUntilExpiry <= 7) {
+            $warningLevel = 'warning';
+        } elseif ($daysUntilExpiry <= 14) {
+            $warningLevel = 'info';
+        } else {
+            $warningLevel = 'none';
+        }
+
+        return [
+            'id'        => $tenant->id,
+            'name'      => $tenant->name,
+            'status'    => $tenant->status,
+            'createdAt' => $tenant->created_at?->toISOString(),
+            'plan'      => $plan ? ['id' => $plan->id, 'name' => $plan->name] : null,
+            'license'   => [
+                'tenantActive'       => $tenantActive,
+                'subscriptionStatus' => $subscriptionStatus,
+                'daysUntilExpiry'    => $daysUntilExpiry,
+                'inGracePeriod'      => $inGracePeriod,
+                'blocked'            => $blocked,
+                'warningLevel'       => $warningLevel,
+                'message'            => null,
+                'userLimit'          => $plan?->user_limit,
+                'userCount'          => $userCount,
+                'invoiceLimit'       => $plan?->invoice_limit,
+                'invoiceCount'       => $invoiceCount,
+                'branchLimit'        => $plan?->branch_limit,
+                'branchCount'        => $branchCount,
+            ],
+        ];
+    }
+
+    public function activate(string $id)
+    {
+        $tenant = Tenant::findOrFail($id);
+        $tenant->update(['status' => 'active']);
+        return response()->json($this->formatCompany($tenant->load('subscription.plan')));
+    }
+
+    public function suspend(string $id)
+    {
+        $tenant = Tenant::findOrFail($id);
+        $tenant->update(['status' => 'suspended']);
+        return response()->json($this->formatCompany($tenant->load('subscription.plan')));
+    }
+
+    public function destroy(string $id)
+    {
+        $tenant = Tenant::findOrFail($id);
+        // Only allow deletion if tenant has no financial data
+        $hasData = DB::table('invoices')
+                ->join('branches', 'branches.id', '=', 'invoices.branch_id')
+                ->where('branches.tenant_id', $id)->exists()
+            || DB::table('products')->where('tenant_id', $id)->exists();
+        if ($hasData) {
+            return response()->json(['message' => 'Cannot delete a company that has sales or catalog data. Suspend it instead.'], 422);
+        }
+        $tenant->delete();
+        return response()->json(null, 204);
     }
 
     public function store(Request $request)
@@ -96,24 +195,23 @@ class CompaniesController extends Controller
                 ]);
             }
 
-            return $tenant->load('subscription.plan');
+            $tenant->load('subscription.plan');
+            return response()->json($this->formatCompany($tenant));
         });
     }
 
     public function show(string $id)
     {
-        $tenant = Tenant::with('subscription.plan')->find($id);
-        if (!$tenant) throw new NotFoundException("Company {$id} not found.");
-        return $tenant;
+        $tenant = Tenant::with('subscription.plan')->findOrFail($id);
+        return response()->json($this->formatCompany($tenant));
     }
 
     public function update(Request $request, string $id)
     {
-        $tenant = Tenant::find($id);
-        if (!$tenant) throw new NotFoundException("Company {$id} not found.");
-
+        $tenant = Tenant::findOrFail($id);
         $tenant->update($request->only(['name','status','address','tax_number','base_currency']));
-        return $tenant->load('subscription.plan');
+        $tenant->load('subscription.plan');
+        return response()->json($this->formatCompany($tenant));
     }
 
     public function getSubscription(string $id)

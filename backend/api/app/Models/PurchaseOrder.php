@@ -1,6 +1,8 @@
-<?php
+﻿<?php
 
 namespace App\Models;
+
+use App\Models\Concerns\HasUuidPrimaryKey;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,9 +11,8 @@ use App\Models\SupplierPayment;
 
 class PurchaseOrder extends Model
 {
-    protected $table = 'purchase_orders';
-    protected $keyType = 'string';
-    public $incrementing = false;
+    use HasUuidPrimaryKey;
+protected $table = 'purchase_orders';
 
     protected $fillable = [
         'id','tenant_id','supplier_id','warehouse_id','order_no','status',

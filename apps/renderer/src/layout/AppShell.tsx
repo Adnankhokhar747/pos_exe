@@ -33,6 +33,7 @@ import { useAuth } from '../state/auth-context';
 import { useLicense } from '../state/license-context';
 import { useModules } from '../state/modules-context';
 import { SecondaryButton } from '../components/buttons';
+import { UpdateBanner } from '../components/UpdateBanner';
 import type { WarningLevel } from '../api/types';
 
 interface NavItem {
@@ -114,6 +115,7 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
 
   return (
     <Box display="flex" flexDirection="column" height="100vh">
+      <UpdateBanner />
       {status && status.warningLevel !== 'none' && (
         <Alert severity={BANNER_SEVERITY[status.warningLevel]} sx={{ borderRadius: 0 }}>
           {status.message}

@@ -87,3 +87,22 @@ export interface ModuleStatus {
 export interface TenantModuleGrant extends ModuleStatus {
   moduleId: string;
 }
+
+// ─── Cloud Backup ─────────────────────────────────────────────────────────────
+
+export interface BackupSnapshotMeta {
+  id: string;
+  version: number;
+  label: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+export interface CompanyBackupStatus {
+  enabled: boolean;
+  autoBackup: boolean;
+  maxSnapshots: number;
+  lastBackedUpAt: string | null;
+  snapshotCount: number;
+  latestSnapshot: BackupSnapshotMeta | null;
+}

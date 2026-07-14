@@ -1,0 +1,31 @@
+appId: com.vantagepos.desktop
+productName: Vantage POS
+directories:
+  output: release-php
+  buildResources: build
+files:
+  - dist/**
+asar: false
+extraResources:
+  - from: USE_LIVE_API
+    to: USE_LIVE_API
+  - from: ../renderer/dist
+    to: renderer
+  - from: ../admin-portal/dist
+    to: admin-portal
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: "VantagePOS-PHP-${version}-Setup.${ext}"
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+publish:
+  - provider: github
+    owner: adnankhokhar451
+    repo: pos_exe
+    releaseType: release

@@ -40,6 +40,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
 publish:
-  - provider: generic
-    url: https://updates.vantagepos.example.com
-    channel: stable
+  - provider: github
+    owner: adnankhokhar451
+    repo: pos_exe
+    releaseType: release

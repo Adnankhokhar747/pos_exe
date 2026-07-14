@@ -1,0 +1,121 @@
+===========================================================
+  VANTAGE POS — QUICK COMMAND REFERENCE
+  (Say these to Claude Code in the project folder)
+===========================================================
+
+-----------------------------------------------------------
+  ADMIN PANEL (web — posvan.taqaantech.com/admin/)
+-----------------------------------------------------------
+
+WHAT YOU SAY:
+  "Update the admin panel"
+
+WHAT HAPPENS:
+  1. Claude edits files in apps/admin-portal/src/
+  2. Runs: cd apps/admin-portal && npm run build
+  3. Tells you to upload these 2 things via FileZilla or cPanel:
+       dist/index.html          → public_html/posvan/admin/index.html
+       dist/assets/*.js         → public_html/posvan/admin/assets/
+
+FTP DETAILS:
+  Host : posvan.taqaantech.com
+  User : posvan@taqaantech.com
+  Pass : GVmc90TelY?K
+  Port : 21
+
+-----------------------------------------------------------
+  USER/POS WEB PORTAL (web — posvan.taqaantech.com/app/)
+-----------------------------------------------------------
+
+WHAT YOU SAY:
+  "Update the user web portal" or "Update the web app"
+
+WHAT HAPPENS:
+  1. Claude edits files in apps/renderer/src/
+  2. Runs: cd apps/renderer && npm run build:web
+  3. Tells you to upload these things via FileZilla or cPanel:
+       dist/index.html          → public_html/posvan/app/index.html
+       dist/.htaccess           → public_html/posvan/app/.htaccess
+       dist/assets/*.js         → public_html/posvan/app/assets/
+       dist/assets/*.css        → public_html/posvan/app/assets/
+
+-----------------------------------------------------------
+  BACKEND (PHP — posvan.taqaantech.com API)
+-----------------------------------------------------------
+
+WHAT YOU SAY:
+  "Update the backend" or "Fix the API"
+
+WHAT HAPPENS:
+  1. Claude edits files in backend/api/
+  2. Tells you which files changed and to upload via FileZilla:
+       Changed file             → same path inside pos_api/ on the server
+  3. If config changed: runs a clear-cache PHP script on the server
+
+IMPORTANT RULE: use config('key') not env('KEY') in controllers!
+
+-----------------------------------------------------------
+  BUILD EXE — LOCAL MODE (uses your local PC database)
+-----------------------------------------------------------
+
+WHAT YOU SAY:
+  "Build the local EXE"
+
+WHAT HAPPENS:
+  1. Renderer built with local API: npm run build (uses .env → localhost:8000)
+  2. Desktop packaged: cd apps/desktop && npm run package
+  3. Output: apps/desktop/release/VantagePOS-Setup.exe
+  4. EXE starts its own Postgres + NestJS API on your PC
+  5. No internet needed — fully offline
+
+-----------------------------------------------------------
+  BUILD EXE — PHP/LIVE MODE (uses posvan.taqaantech.com)
+-----------------------------------------------------------
+
+WHAT YOU SAY:
+  "Build the PHP EXE" or "Build the EXE with live API"
+
+WHAT HAPPENS:
+  1. Renderer built with live API: npm run build:php (uses .env.php → posvan.taqaantech.com)
+  2. Desktop packaged: cd apps/desktop && npm run package:php
+  3. Output: apps/desktop/release-php/VantagePOS-PHP-x.x.x-Setup.exe
+  4. EXE does NOT start any local Postgres/NestJS (uses live server)
+  5. Internet required — all data is on the server
+  6. License check happens automatically on login (server blocks expired licenses)
+
+-----------------------------------------------------------
+  LICENSE / PERMISSIONS (via admin panel)
+-----------------------------------------------------------
+
+WHAT YOU SAY:
+  "Give company X a license" or "Suspend company X"
+
+WHAT HAPPENS:
+  Go to https://posvan.taqaantech.com/admin/
+  Login → Companies → find the company → manage subscription
+  Changes take effect immediately (next time user tries to login)
+
+-----------------------------------------------------------
+  ADD A NEW FEATURE / PAGE
+-----------------------------------------------------------
+
+WHAT YOU SAY:
+  "Add a [feature name] page to the POS"
+  "Add a [feature name] endpoint to the backend"
+
+WHAT HAPPENS:
+  Claude writes the code, then you:
+  - For backend change: upload changed PHP files to server
+  - For frontend change: rebuild + upload as above
+
+-----------------------------------------------------------
+  ENV FILES (do not commit to git — they have passwords)
+-----------------------------------------------------------
+
+  apps/renderer/.env         → local dev (localhost:8000)
+  apps/renderer/.env.web     → web portal build (posvan.taqaantech.com, base=/app/)
+  apps/renderer/.env.php     → PHP EXE build (posvan.taqaantech.com)
+  apps/admin-portal/.env     → local dev (localhost:8000)
+  apps/admin-portal/.env.production → web admin build (posvan.taqaantech.com)
+
+===========================================================

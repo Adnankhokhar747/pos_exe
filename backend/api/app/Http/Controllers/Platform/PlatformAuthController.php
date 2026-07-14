@@ -23,8 +23,8 @@ class PlatformAuthController extends Controller
             throw new UnauthorizedException('Invalid platform credentials.');
         }
 
-        $secret = env('PLATFORM_JWT_SECRET');
-        $ttl = (int) env('PLATFORM_JWT_TTL', 1440);
+        $secret = config('jwt.platform_secret');
+        $ttl = config('jwt.platform_ttl', 1440);
         $payload = [
             'sub' => $admin->id,
             'iat' => time(),

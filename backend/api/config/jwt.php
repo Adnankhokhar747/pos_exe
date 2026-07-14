@@ -1,7 +1,9 @@
 <?php
 
 return [
-    'secret'  => env('JWT_SECRET'),
+    'secret'          => env('JWT_SECRET'),
+    'platform_secret' => env('PLATFORM_JWT_SECRET'),
+    'platform_ttl'    => (int) env('PLATFORM_JWT_TTL', 1440),
     'keys'    => ['public' => null, 'private' => null, 'passphrase' => null],
     'ttl'     => env('JWT_TTL', 1440),
     'refresh_ttl' => env('JWT_REFRESH_TTL', 20160),

@@ -16,7 +16,7 @@ createRoot(document.getElementById('root')!).render(
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <BrowserRouter>
+          <BrowserRouter basename={import.meta.env.VITE_ADMIN_BASE ?? '/'}>
             <App />
           </BrowserRouter>
         </AuthProvider>

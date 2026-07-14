@@ -19,7 +19,7 @@ class PlatformAuthMiddleware
         }
 
         try {
-            $secret = config('services.platform_jwt_secret', env('PLATFORM_JWT_SECRET'));
+            $secret = config('jwt.platform_secret');
             $payload = JWT::decode($token, new Key($secret, 'HS256'));
             $admin = PlatformAdmin::find($payload->sub);
             if (!$admin) {

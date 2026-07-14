@@ -26,9 +26,9 @@ class CurrenciesController extends Controller
     public function upsert(Request $request)
     {
         $request->validate([
-            'code'   => 'required|string|size:3',
-            'name'   => 'required|string',
-            'symbol' => 'required|string',
+            'code'   => 'required|string|max:10',
+            'name'   => 'required|string|max:100',
+            'symbol' => 'required|string|max:10',
         ]);
 
         $currency = Currency::updateOrCreate(

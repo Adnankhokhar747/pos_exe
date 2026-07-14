@@ -12,4 +12,11 @@ contextBridge.exposeInMainWorld('vantage', {
       ipcRenderer.invoke('printing:print-html', html, options),
     printToPdf: (html: string) => ipcRenderer.invoke('printing:print-to-pdf', html),
   },
+  updater: {
+    onAvailable: (cb: (info: { version: string; releaseNotes?: string | null }) => void) =>
+      ipcRenderer.on('update:available', (_event, info) => cb(info)),
+    onDownloaded: (cb: (info: { version: string; releaseNotes?: string | null }) => void) =>
+      ipcRenderer.on('update:downloaded', (_event, info) => cb(info)),
+    installNow: () => ipcRenderer.invoke('update:install-now'),
+  },
 });

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { PosPage } from './pages/PosPage';
 import { CustomersPage } from './pages/CustomersPage';
@@ -48,7 +49,11 @@ function RequireAuth({
   if (permission && !user?.permissions.includes(permission)) return <Navigate to="/pos" replace />;
   if (requiredModule && !isModuleEnabled(requiredModule)) return <Navigate to="/pos" replace />;
 
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AppShell>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </AppShell>
+  );
 }
 
 export function App(): JSX.Element {

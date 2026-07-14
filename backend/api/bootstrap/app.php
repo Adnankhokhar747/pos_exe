@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -10,9 +11,15 @@ use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        api: __DIR__.'/../routes/api.php',
+        api:     __DIR__.'/../routes/api.php',
+        web:     __DIR__.'/../routes/web.php',
         apiPrefix: 'api',
+        commands: __DIR__.'/../routes/console.php',
     )
+    ->withSchedule(function (Schedule $schedule) {
+        // Daily cloud backup for all enabled tenants — runs at 02:00 every night
+        $schedule->command('backup:daily-cloud')->dailyAt('02:00');
+    })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->api(prepend: [
             \App\Http\Middleware\CamelCaseResponse::class,
