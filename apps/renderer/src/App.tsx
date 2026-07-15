@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
@@ -20,9 +20,11 @@ import { TokenQueuePage } from './pages/TokenQueuePage';
 import { DoctorReportsPage } from './pages/DoctorReportsPage';
 import { AppShell } from './layout/AppShell';
 import { LicenseBlockedScreen } from './layout/LicenseBlockedScreen';
+import { OfflineLicenseExpiredScreen } from './layout/OfflineLicenseExpiredScreen';
 import { useAuth } from './state/auth-context';
 import { useLicense } from './state/license-context';
 import { useModules } from './state/modules-context';
+import { useSubscriptionNotification } from './hooks/useSubscriptionNotification';
 
 function RequireAuth({
   children,
@@ -34,8 +36,9 @@ function RequireAuth({
   requiredModule?: string;
 }): JSX.Element {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const { isBlocked } = useLicense();
+  const { isBlocked, isOffline, offlineCacheExpired } = useLicense();
   const { isModuleEnabled } = useModules();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -46,7 +49,11 @@ function RequireAuth({
   }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (offlineCacheExpired) return <OfflineLicenseExpiredScreen />;
   if (isBlocked) return <LicenseBlockedScreen />;
+  if (isOffline && !location.pathname.startsWith('/pos') && !location.pathname.startsWith('/settings')) {
+    return <Navigate to="/pos" replace />;
+  }
   const perms = user?.permissions ?? [];
   const hasAll = perms.includes('ALL') || perms.includes('*');
   const PHP_ALIASES: Record<string, string> = {
@@ -74,6 +81,8 @@ function RequireAuth({
 }
 
 export function App(): JSX.Element {
+  useSubscriptionNotification();
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

@@ -34,10 +34,15 @@ interface VantageUpdater {
   installNow: () => Promise<void>;
 }
 
+interface VantageNotification {
+  show: (title: string, body: string) => Promise<void>;
+}
+
 interface Vantage {
   appVersion: string;
   printing: VantagePrinting;
   updater: VantageUpdater;
+  notification: VantageNotification;
 }
 
 interface Window {

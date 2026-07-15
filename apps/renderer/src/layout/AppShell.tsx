@@ -29,6 +29,7 @@ import BadgeIcon from '@mui/icons-material/Badge';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import SummarizeIcon from '@mui/icons-material/Summarize';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth-context';
 import { useLicense } from '../state/license-context';
@@ -43,6 +44,7 @@ interface NavItem {
   icon: ReactNode;
   requiredPermission?: string;
   requiredModule?: string;
+  offlineAllowed?: boolean;
 }
 
 const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
@@ -50,7 +52,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
     label: 'Sales',
     items: [
       { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
-      { path: '/pos', label: 'POS Terminal', icon: <PointOfSaleIcon /> },
+      { path: '/pos', label: 'POS Terminal', icon: <PointOfSaleIcon />, offlineAllowed: true },
     ],
   },
   {
@@ -88,7 +90,7 @@ const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   },
   {
     label: 'System',
-    items: [{ path: '/settings', label: 'Settings', icon: <SettingsIcon /> }],
+    items: [{ path: '/settings', label: 'Settings', icon: <SettingsIcon />, offlineAllowed: true }],
   },
 ];
 
@@ -104,7 +106,7 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { status } = useLicense();
+  const { status, isOffline, offlineDaysRemaining } = useLicense();
   const { isModuleEnabled } = useModules();
 
   const permissions = user?.permissions ?? [];
@@ -131,6 +133,7 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
     ...group,
     items: group.items.filter(
       (item) =>
+        (!isOffline || (item.offlineAllowed ?? false)) &&
         (hasAll || !item.requiredPermission || hasPerm(item.requiredPermission)) &&
         (!item.requiredModule || isModuleEnabled(item.requiredModule)),
     ),
@@ -142,6 +145,12 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
       {status && status.warningLevel !== 'none' && (
         <Alert severity={BANNER_SEVERITY[status.warningLevel]} sx={{ borderRadius: 0 }}>
           {status.message}
+        </Alert>
+      )}
+      {isOffline && (
+        <Alert severity="warning" icon={<WifiOffIcon fontSize="inherit" />} sx={{ borderRadius: 0 }}>
+          You are offline — only POS Terminal is available. Cached license valid for{' '}
+          {offlineDaysRemaining} more day{offlineDaysRemaining !== 1 ? 's' : ''}.
         </Alert>
       )}
       <Box display="flex" flex={1} minHeight={0}>

@@ -19,4 +19,7 @@ contextBridge.exposeInMainWorld('vantage', {
       ipcRenderer.on('update:downloaded', (_event, info) => cb(info)),
     installNow: () => ipcRenderer.invoke('update:install-now'),
   },
+  notification: {
+    show: (title: string, body: string) => ipcRenderer.invoke('notification:show', title, body),
+  },
 });

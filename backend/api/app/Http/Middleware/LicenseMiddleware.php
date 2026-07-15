@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Exceptions\LicenseBlockedError;
 use Carbon\Carbon;
@@ -16,6 +17,16 @@ class LicenseMiddleware
         $user = $request->user();
         if (!$user) {
             return response()->json(['error' => 'unauthenticated'], 401);
+        }
+
+        // Check tenant-level suspension first — this is the authoritative gate
+        // set by CompaniesController::suspend, independent of subscription dates.
+        $tenant = Tenant::where('id', $user->tenant_id)->first();
+        if (!$tenant || $tenant->status === 'suspended') {
+            throw new LicenseBlockedError('Your account has been suspended. Please contact your administrator.');
+        }
+        if ($tenant->status === 'cancelled') {
+            throw new LicenseBlockedError('Your account has been cancelled.');
         }
 
         $sub = TenantSubscription::where('tenant_id', $user->tenant_id)->first();

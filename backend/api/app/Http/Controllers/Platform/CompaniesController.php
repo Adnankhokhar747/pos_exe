@@ -105,6 +105,11 @@ class CompaniesController extends Controller
     {
         $tenant = Tenant::findOrFail($id);
         $tenant->update(['status' => 'active']);
+        // Keep TenantSubscription in sync so LicenseMiddleware and the status
+        // endpoint both see the correct state immediately without a cache flush.
+        TenantSubscription::where('tenant_id', $id)
+            ->where('status', 'suspended')
+            ->update(['status' => 'active']);
         return response()->json($this->formatCompany($tenant->load('subscription.plan')));
     }
 
@@ -112,6 +117,9 @@ class CompaniesController extends Controller
     {
         $tenant = Tenant::findOrFail($id);
         $tenant->update(['status' => 'suspended']);
+        // Mirror to TenantSubscription so both the middleware and the status
+        // endpoint enforce the suspension correctly.
+        TenantSubscription::where('tenant_id', $id)->update(['status' => 'suspended']);
         return response()->json($this->formatCompany($tenant->load('subscription.plan')));
     }
 

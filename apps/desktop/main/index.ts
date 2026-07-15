@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, net, protocol } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, net, Notification, protocol } from 'electron';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { autoUpdater } from 'electron-updater';
@@ -137,6 +137,14 @@ function registerUpdaterIpcHandlers(): void {
   });
 }
 
+function registerNotificationIpcHandlers(): void {
+  ipcMain.handle('notification:show', (_evt, title: string, body: string) => {
+    if (Notification.isSupported()) {
+      new Notification({ title, body }).show();
+    }
+  });
+}
+
 async function bootstrap(): Promise<void> {
   // A cash-register terminal has no business exposing Reload/DevTools/Zoom to
   // whoever is standing at the till — Electron's default menu is a developer
@@ -183,6 +191,7 @@ async function bootstrap(): Promise<void> {
 
   registerPrintingIpcHandlers();
   registerUpdaterIpcHandlers();
+  registerNotificationIpcHandlers();
   await createWindow();
 
   if (app.isPackaged) {

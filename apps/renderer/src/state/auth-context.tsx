@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { setAccessToken, getAccessToken, apiFetch } from '../api/client';
+import { setAccessToken, getAccessToken, apiFetch, ApiError } from '../api/client';
 import type { AuthenticatedUser } from '../api/types';
+import { saveUserCache, loadUserCache } from './offline-cache';
 
 interface AuthContextValue {
   user: AuthenticatedUser | null;
@@ -22,9 +23,20 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     if (!token) return;
 
     apiFetch<AuthenticatedUser>('/api/v1/auth/me')
-      .then((me) => setUser(me))
-      .catch(() => {
-        // Token is expired or invalid — clear it so the user lands on login cleanly.
+      .then((me) => {
+        setUser(me);
+        saveUserCache(me);
+      })
+      .catch((err) => {
+        if (!(err instanceof ApiError)) {
+          // Network error: server unreachable — restore session from offline cache
+          const cached = loadUserCache();
+          if (cached) {
+            setUser(cached.data);
+            return;
+          }
+        }
+        // Server rejected the token (401/403) or no offline cache — force re-login
         setAccessToken(null);
       })
       .finally(() => setIsLoading(false));
@@ -38,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       login: (token, loggedInUser) => {
         setAccessToken(token);
         setUser(loggedInUser);
+        saveUserCache(loggedInUser);
       },
       logout: () => {
         setAccessToken(null);

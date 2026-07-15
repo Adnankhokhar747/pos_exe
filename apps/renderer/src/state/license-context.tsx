@@ -1,25 +1,30 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../api/client';
 import type { LicenseStatus } from '../api/types';
 import { useAuth } from './auth-context';
+import { saveLicenseCache, loadLicenseCache } from './offline-cache';
 
 interface LicenseContextValue {
   status: LicenseStatus | null;
   isBlocked: boolean;
+  isOffline: boolean;
+  offlineDaysRemaining: number;
+  offlineCacheExpired: boolean;
 }
 
 const LicenseContext = createContext<LicenseContextValue | undefined>(undefined);
 
-// Polls the live license/subscription status while a session is open, rather than
-// relying on a cron/email — the only signal a blocked/expiring company gets is this
-// poll plus the LicenseGuard re-check the branch-api already does on every request.
 const POLL_INTERVAL_MS = 60_000;
 
 export function LicenseProvider({ children }: { children: ReactNode }): JSX.Element {
   const { isAuthenticated } = useAuth();
+  const [cachedStatus, setCachedStatus] = useState<LicenseStatus | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineDaysRemaining, setOfflineDaysRemaining] = useState(0);
+  const [offlineCacheExpired, setOfflineCacheExpired] = useState(false);
 
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ['license-status'],
     queryFn: () => apiFetch<LicenseStatus>('/api/v1/license/status'),
     enabled: isAuthenticated,
@@ -28,12 +33,42 @@ export function LicenseProvider({ children }: { children: ReactNode }): JSX.Elem
     retry: false,
   });
 
+  // Persist fresh server data and clear offline state
+  useEffect(() => {
+    if (data) {
+      saveLicenseCache(data);
+      setIsOffline(false);
+      setOfflineCacheExpired(false);
+    }
+  }, [data]);
+
+  // When the fetch fails and there is no in-memory data, fall back to the offline cache
+  useEffect(() => {
+    if (isError && !data) {
+      const cached = loadLicenseCache();
+      if (cached) {
+        setCachedStatus(cached.data);
+        setOfflineDaysRemaining(cached.daysRemaining);
+        setIsOffline(true);
+        setOfflineCacheExpired(false);
+      } else {
+        setIsOffline(true);
+        setOfflineCacheExpired(true);
+      }
+    }
+  }, [isError, data]);
+
+  const effectiveStatus = data ?? cachedStatus;
+
   const value = useMemo<LicenseContextValue>(
     () => ({
-      status: data ?? null,
-      isBlocked: data?.blocked ?? false,
+      status: effectiveStatus,
+      isBlocked: offlineCacheExpired || (effectiveStatus?.blocked ?? false),
+      isOffline,
+      offlineDaysRemaining,
+      offlineCacheExpired,
     }),
-    [data],
+    [effectiveStatus, isOffline, offlineDaysRemaining, offlineCacheExpired],
   );
 
   return <LicenseContext.Provider value={value}>{children}</LicenseContext.Provider>;
