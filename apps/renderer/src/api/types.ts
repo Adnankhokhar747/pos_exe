@@ -649,6 +649,12 @@ export interface DoctorPatientCount {
   patientCount: number;
 }
 
+export interface PaymentMethodTotal {
+  method: string;
+  total: string;
+  count: number;
+}
+
 export interface DoctorAppointmentSummary {
   doctorId: string;
   doctorName: string;

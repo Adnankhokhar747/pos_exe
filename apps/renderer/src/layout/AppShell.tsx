@@ -13,6 +13,7 @@ import {
   Toolbar,
   Typography,
 } from '@mui/material';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import PeopleIcon from '@mui/icons-material/People';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
@@ -47,7 +48,10 @@ interface NavItem {
 const NAV_GROUPS: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'Sales',
-    items: [{ path: '/pos', label: 'POS Terminal', icon: <PointOfSaleIcon /> }],
+    items: [
+      { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
+      { path: '/pos', label: 'POS Terminal', icon: <PointOfSaleIcon /> },
+    ],
   },
   {
     label: 'Catalog & Stock',
@@ -104,11 +108,30 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
   const { isModuleEnabled } = useModules();
 
   const permissions = user?.permissions ?? [];
+  const hasAll = permissions.includes('ALL') || permissions.includes('*');
+
+  // PHP backend uses different codes than NestJS — accept either
+  const PHP_ALIASES: Record<string, string> = {
+    'product.write': 'product.manage',
+    'stock.adjust': 'inventory.adjust',
+    'stock.transfer': 'inventory.manage',
+    'settings.write': 'settings.manage',
+    'customer.write': 'customer.manage',
+    'supplier.write': 'supplier.manage',
+    'purchase.create': 'purchase.manage',
+    'report.financial.view': 'report.view',
+    'accounting.write': 'expense.manage',
+  };
+
+  function hasPerm(code: string): boolean {
+    return permissions.includes(code) || permissions.includes(PHP_ALIASES[code] ?? '');
+  }
+
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: group.items.filter(
       (item) =>
-        (!item.requiredPermission || permissions.includes(item.requiredPermission)) &&
+        (hasAll || !item.requiredPermission || hasPerm(item.requiredPermission)) &&
         (!item.requiredModule || isModuleEnabled(item.requiredModule)),
     ),
   })).filter((group) => group.items.length > 0);

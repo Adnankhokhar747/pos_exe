@@ -12,6 +12,7 @@ import { AccountingPage } from './pages/AccountingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CatalogPage } from './pages/CatalogPage';
 import { PromotionsPage } from './pages/PromotionsPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { DoctorsPage } from './pages/DoctorsPage';
 import { PatientsPage } from './pages/PatientsPage';
 import { AppointmentsPage } from './pages/AppointmentsPage';
@@ -46,7 +47,23 @@ function RequireAuth({
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (isBlocked) return <LicenseBlockedScreen />;
-  if (permission && !user?.permissions.includes(permission)) return <Navigate to="/pos" replace />;
+  const perms = user?.permissions ?? [];
+  const hasAll = perms.includes('ALL') || perms.includes('*');
+  const PHP_ALIASES: Record<string, string> = {
+    'product.write': 'product.manage',
+    'stock.adjust': 'inventory.adjust',
+    'stock.transfer': 'inventory.manage',
+    'settings.write': 'settings.manage',
+    'customer.write': 'customer.manage',
+    'supplier.write': 'supplier.manage',
+    'purchase.create': 'purchase.manage',
+    'report.financial.view': 'report.view',
+    'accounting.write': 'expense.manage',
+  };
+  function hasPerm(code: string): boolean {
+    return perms.includes(code) || perms.includes(PHP_ALIASES[code] ?? '');
+  }
+  if (permission && !hasAll && !hasPerm(permission)) return <Navigate to="/dashboard" replace />;
   if (requiredModule && !isModuleEnabled(requiredModule)) return <Navigate to="/pos" replace />;
 
   return (
@@ -180,7 +197,15 @@ export function App(): JSX.Element {
           </RequireAuth>
         }
       />
-      <Route path="*" element={<Navigate to="/pos" replace />} />
+      <Route
+        path="/dashboard"
+        element={
+          <RequireAuth>
+            <DashboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
 }
