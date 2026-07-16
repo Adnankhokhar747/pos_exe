@@ -51,7 +51,7 @@ class InvoicesController extends Controller
 
         // Check invoice limit
         $sub = TenantSubscription::with('plan')->where('tenant_id', $tenantId)->first();
-        if ($sub && $sub->plan->invoice_limit !== null) {
+        if ($sub && $sub->plan?->invoice_limit !== null) {
             $branchIds = Branch::where('tenant_id', $tenantId)->pluck('id');
             $count = Invoice::whereIn('branch_id', $branchIds)->where('status','completed')->count();
             if ($count >= $sub->plan->invoice_limit) {
@@ -97,6 +97,25 @@ class InvoicesController extends Controller
             $invoiceDiscount = (float)($request->invoiceDiscountValue ?? 0);
             $discountTotal   = $lineDiscountTotal + $invoiceDiscount;
             $grandTotal      = max(0, $subtotal - $discountTotal + $taxTotal);
+
+            // Validate stock availability — reject before creating the invoice row.
+            $warehouseId = \App\Models\Warehouse::where('branch_id', $branch->id)->where('is_default', true)->value('id');
+            if ($warehouseId) {
+                $productIds  = collect($computedLines)->pluck('productId');
+                $stockMap    = StockLevel::where('warehouse_id', $warehouseId)
+                    ->whereIn('product_id', $productIds)
+                    ->get()->keyBy('product_id');
+                $bundleIds   = Product::whereIn('id', $productIds)->where('is_bundle', true)->pluck('id')->toArray();
+
+                foreach ($computedLines as $line) {
+                    if (in_array($line['productId'], $bundleIds)) continue;
+                    $available = (float)($stockMap->get($line['productId'])?->quantity_on_hand ?? 0);
+                    if ($available < $line['quantity']) {
+                        $name = Product::where('id', $line['productId'])->value('name') ?? $line['productId'];
+                        throw new ConflictException("Insufficient stock for '{$name}'. Available: {$available}.");
+                    }
+                }
+            }
 
             $invoice = Invoice::create([
                 'id'            => (string) \Illuminate\Support\Str::uuid(),
@@ -404,8 +423,7 @@ class InvoicesController extends Controller
         DB::statement(
             "INSERT INTO stock_levels (warehouse_id, product_id, quantity_on_hand, quantity_reserved)
              VALUES (?, ?, 0, 0)
-             ON CONFLICT (warehouse_id, product_id)
-             DO UPDATE SET quantity_on_hand = GREATEST(0, stock_levels.quantity_on_hand - ?)",
+             ON DUPLICATE KEY UPDATE quantity_on_hand = GREATEST(0, quantity_on_hand - ?)",
             [$warehouseId, $productId, $qty]
         );
 
@@ -428,8 +446,7 @@ class InvoicesController extends Controller
         DB::statement(
             "INSERT INTO stock_levels (warehouse_id, product_id, quantity_on_hand, quantity_reserved)
              VALUES (?, ?, ?, 0)
-             ON CONFLICT (warehouse_id, product_id)
-             DO UPDATE SET quantity_on_hand = stock_levels.quantity_on_hand + EXCLUDED.quantity_on_hand",
+             ON DUPLICATE KEY UPDATE quantity_on_hand = quantity_on_hand + VALUES(quantity_on_hand)",
             [$warehouseId, $productId, $qty]
         );
 

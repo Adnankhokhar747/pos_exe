@@ -19,9 +19,9 @@ class ProductsController extends Controller
             ->with(['category','stockLevels'])
             ->when($request->search, fn($q, $s) =>
                 $q->where(function($q) use ($s) {
-                    $q->where('name','ilike',"%{$s}%")
-                      ->orWhere('sku','ilike',"%{$s}%")
-                      ->orWhere('barcode','ilike',"%{$s}%");
+                    $q->where('name','like',"%{$s}%")
+                      ->orWhere('sku','like',"%{$s}%")
+                      ->orWhere('barcode','like',"%{$s}%");
                 })
             )
             ->when($request->categoryId, fn($q,$c) => $q->where('category_id',$c))
@@ -182,9 +182,9 @@ class ProductsController extends Controller
             ->whereNull('deleted_at')
             ->when($search, fn($q) =>
                 $q->where(function($q) use ($search) {
-                    $q->where('name','ilike',"%{$search}%")
-                      ->orWhere('sku','ilike',"%{$search}%")
-                      ->orWhere('barcode','ilike',"%{$search}%");
+                    $q->where('name','like',"%{$search}%")
+                      ->orWhere('sku','like',"%{$search}%")
+                      ->orWhere('barcode','like',"%{$search}%");
                 })
             )
             ->orderBy('name')

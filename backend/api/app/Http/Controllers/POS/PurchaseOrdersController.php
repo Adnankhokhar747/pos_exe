@@ -127,6 +127,28 @@ class PurchaseOrdersController extends Controller
                 ]);
             }
 
+            // FIFO: allocate this advance against any existing unpaid SI for this PO
+            $remaining = $amount;
+            $poInvoices = SupplierInvoice::whereHas('goodsReceipt', fn($q) =>
+                    $q->where('purchase_order_id', $po->id))
+                ->whereIn('status', ['unpaid', 'partially_paid'])
+                ->orderBy('created_at')
+                ->get();
+            foreach ($poInvoices as $si) {
+                if ($remaining <= 0.001) break;
+                $outstanding = (float)$si->amount - (float)$si->amount_paid;
+                $allocate    = min($outstanding, $remaining);
+                SupplierPaymentAllocation::create([
+                    'supplier_payment_id' => $payment->id,
+                    'supplier_invoice_id' => $si->id,
+                    'amount_allocated'    => $allocate,
+                ]);
+                $newSiPaid   = (float)$si->amount_paid + $allocate;
+                $newSiStatus = $newSiPaid >= (float)$si->amount - 0.001 ? 'paid' : 'partially_paid';
+                $si->update(['amount_paid' => $newSiPaid, 'status' => $newSiStatus]);
+                $remaining  -= $allocate;
+            }
+
             return $po->fresh()->loadSum('payments', 'amount')->load(['supplier', 'lines.product']);
         });
     }
@@ -172,8 +194,7 @@ class PurchaseOrdersController extends Controller
                 DB::statement(
                     "INSERT INTO stock_levels (warehouse_id, product_id, quantity_on_hand, quantity_reserved)
                      VALUES (?, ?, ?, 0)
-                     ON CONFLICT (warehouse_id, product_id)
-                     DO UPDATE SET quantity_on_hand = stock_levels.quantity_on_hand + EXCLUDED.quantity_on_hand",
+                     ON DUPLICATE KEY UPDATE quantity_on_hand = quantity_on_hand + VALUES(quantity_on_hand)",
                     [$po->warehouse_id, $line['productId'], $line['quantityReceived']]
                 );
 
@@ -191,39 +212,20 @@ class PurchaseOrdersController extends Controller
                 $totalCost += $line['quantityReceived'] * $line['unitCost'];
             }
 
-            // Auto-apply any advance payments made against this PO
-            $advancePaid = (float) SupplierPayment::where('purchase_order_id', $po->id)->sum('amount');
-            $amountPaid  = min($advancePaid, $totalCost);
-            $status      = $amountPaid >= $totalCost ? 'paid' : ($amountPaid > 0 ? 'partially_paid' : 'unpaid');
+            $supplier = Supplier::find($po->supplier_id);
+            $invCount = SupplierInvoice::where('supplier_id', $po->supplier_id)->count();
+            $siNo     = 'SI-' . str_pad($invCount + 1, 5, '0', STR_PAD_LEFT);
 
-            $supplier  = Supplier::find($po->supplier_id);
-            $invCount  = SupplierInvoice::where('supplier_id', $po->supplier_id)->count();
-            $siNo      = 'SI-' . str_pad($invCount + 1, 5, '0', STR_PAD_LEFT);
-
+            // Create SI as unpaid first
             $si = SupplierInvoice::create([
                 'id'              => (string) \Illuminate\Support\Str::uuid(),
                 'supplier_id'     => $po->supplier_id,
                 'goods_receipt_id'=> $gr->id,
                 'invoice_no'      => $siNo,
                 'amount'          => $totalCost,
-                'amount_paid'     => $amountPaid,
-                'status'          => $status,
+                'amount_paid'     => 0,
+                'status'          => 'unpaid',
             ]);
-
-            // Link advance payments → invoice so both PO + invoice refs appear on payment rows
-            if ($amountPaid > 0) {
-                $remaining       = $amountPaid;
-                $advancePayments = SupplierPayment::where('purchase_order_id', $po->id)->get();
-                foreach ($advancePayments as $advPayment) {
-                    if ($remaining <= 0) break;
-                    $allocated = min((float) $advPayment->amount, $remaining);
-                    SupplierPaymentAllocation::firstOrCreate(
-                        ['supplier_payment_id' => $advPayment->id, 'supplier_invoice_id' => $si->id],
-                        ['amount_allocated' => $allocated]
-                    );
-                    $remaining -= $allocated;
-                }
-            }
 
             if ($supplier) {
                 $newBal = (float)$supplier->current_balance + $totalCost;
@@ -237,6 +239,33 @@ class PurchaseOrdersController extends Controller
                     'reference_table'=> 'supplier_invoices',
                     'reference_id'   => $si->id,
                 ]);
+            }
+
+            // Apply only unallocated advance payments for this specific PO
+            $remaining  = $totalCost;
+            $amountPaid = 0;
+            $poPayments = SupplierPayment::where('purchase_order_id', $po->id)
+                ->orderBy('paid_at')
+                ->get();
+            foreach ($poPayments as $pmnt) {
+                if ($remaining <= 0.001) break;
+                $alreadyAllocated = (float) SupplierPaymentAllocation
+                    ::where('supplier_payment_id', $pmnt->id)
+                    ->sum('amount_allocated');
+                $available = (float)$pmnt->amount - $alreadyAllocated;
+                if ($available <= 0.001) continue;
+                $allocate = min($available, $remaining);
+                SupplierPaymentAllocation::create([
+                    'supplier_payment_id' => $pmnt->id,
+                    'supplier_invoice_id' => $si->id,
+                    'amount_allocated'    => $allocate,
+                ]);
+                $amountPaid += $allocate;
+                $remaining  -= $allocate;
+            }
+            if ($amountPaid > 0) {
+                $newStatus = $amountPaid >= $totalCost - 0.001 ? 'paid' : 'partially_paid';
+                $si->update(['amount_paid' => $amountPaid, 'status' => $newStatus]);
             }
 
             $po->update(['status' => 'received']);

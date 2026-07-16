@@ -2,25 +2,33 @@ import { Box, Card, CardContent, Chip, CircularProgress, Divider, Stack, Typogra
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import PeopleIcon from '@mui/icons-material/People';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
-import PaymentIcon from '@mui/icons-material/Payment';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../api/client';
 import { useAuth } from '../state/auth-context';
 import { useModules } from '../state/modules-context';
-import type { SalesSummary, ProfitSummary, DoctorPatientCount, PaymentMethodTotal } from '../api/types';
+import type { SalesSummary, ProfitSummary } from '../api/types';
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function fmt(val: string | undefined | null, opts?: { sign?: boolean }): string {
+function fmt(val: string | undefined | null): string {
   if (val === undefined || val === null) return '—';
   const n = parseFloat(val);
-  const formatted = Math.abs(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (opts?.sign && n < 0) return `- ${formatted}`;
-  return formatted;
+  return Math.abs(n).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function toArr(val: unknown): unknown[] {
+  if (Array.isArray(val)) return val;
+  if (val && typeof val === 'object' && Array.isArray((val as Record<string, unknown>).data))
+    return (val as Record<string, unknown>).data as unknown[];
+  return [];
 }
 
 function StatCard({
@@ -96,36 +104,42 @@ export function DashboardPage(): JSX.Element {
     retry: false,
   });
 
-  const paymentQ = useQuery({
-    queryKey: ['dash-payments', today, branchId],
-    queryFn: () =>
-      apiFetch<PaymentMethodTotal[]>(
-        `/api/v1/reports/payment-methods?branchId=${branchId}&from=${today}&to=${today}`,
-      ),
+  // Total products — uses existing /products endpoint, count the result
+  const productsQ = useQuery({
+    queryKey: ['dash-products'],
+    queryFn: () => apiFetch<unknown>(`/api/v1/products`),
     retry: false,
+    select: (data) => toArr(data).length,
   });
 
-  const patientsQ = useQuery({
-    queryKey: ['dash-patients', today],
-    queryFn: () => apiFetch<DoctorPatientCount[]>(`/api/v1/hospital/reports/daily-patients?date=${today}`),
+  // Low stock — uses existing /reports/low-stock endpoint
+  const lowStockQ = useQuery({
+    queryKey: ['dash-low-stock', branchId],
+    queryFn: () => apiFetch<unknown>(`/api/v1/reports/low-stock?branchId=${branchId}`),
+    retry: false,
+    select: (data) => toArr(data).length,
+  });
+
+  // Total doctors (hospital only) — uses existing /hospital/doctors endpoint
+  const doctorsQ = useQuery({
+    queryKey: ['dash-doctors'],
+    queryFn: () => apiFetch<unknown>(`/api/v1/hospital/doctors`),
     enabled: hospitalEnabled,
     retry: false,
+    select: (data) => toArr(data).length,
+  });
+
+  // Total patients (hospital only) — uses existing /hospital/patients endpoint
+  const patientsCountQ = useQuery({
+    queryKey: ['dash-patients-count'],
+    queryFn: () => apiFetch<unknown>(`/api/v1/hospital/patients`),
+    enabled: hospitalEnabled,
+    retry: false,
+    select: (data) => toArr(data).length,
   });
 
   const netProfit = profitQ.data ? parseFloat(profitQ.data.netProfit) : null;
   const isProfit = netProfit !== null ? netProfit >= 0 : null;
-
-  // PHP backend may return { data: [...] } instead of a bare array
-  function toArray<T>(val: unknown): T[] {
-    if (Array.isArray(val)) return val as T[];
-    if (val && typeof val === 'object' && Array.isArray((val as Record<string, unknown>).data))
-      return (val as Record<string, unknown>).data as T[];
-    return [];
-  }
-
-  const patientsArr = toArray<DoctorPatientCount>(patientsQ.data);
-  const paymentArr = toArray<PaymentMethodTotal>(paymentQ.data);
-  const totalPatients = patientsArr.reduce((s, d) => s + d.patientCount, 0);
 
   const dateLabel = new Date().toLocaleDateString('en', {
     weekday: 'long',
@@ -133,6 +147,8 @@ export function DashboardPage(): JSX.Element {
     month: 'long',
     day: 'numeric',
   });
+
+  const lowStock = lowStockQ.data ?? 0;
 
   return (
     <Box p={2.5} height="100%" overflow="auto">
@@ -169,15 +185,7 @@ export function DashboardPage(): JSX.Element {
                 : fmt(profitQ.data?.netProfit)
           }
           sub={profitQ.data ? `Expenses: ${fmt(profitQ.data.expenses)}` : undefined}
-          icon={
-            isProfit === null ? (
-              <TrendingUpIcon fontSize="small" />
-            ) : isProfit ? (
-              <TrendingUpIcon fontSize="small" />
-            ) : (
-              <TrendingDownIcon fontSize="small" />
-            )
-          }
+          icon={isProfit === false ? <TrendingDownIcon fontSize="small" /> : <TrendingUpIcon fontSize="small" />}
           accent={isProfit === null ? '#757575' : isProfit ? '#2e7d32' : '#d32f2f'}
           chip={
             netProfit !== null
@@ -187,71 +195,52 @@ export function DashboardPage(): JSX.Element {
           loading={profitQ.isLoading}
         />
 
+        <StatCard
+          title="Total Products"
+          value={productsQ.isError ? '—' : productsQ.isLoading ? '…' : String(productsQ.data ?? 0)}
+          sub="Active products"
+          icon={<InventoryIcon fontSize="small" />}
+          accent="#7b1fa2"
+          loading={productsQ.isLoading}
+        />
+
+        <StatCard
+          title="Low Stock"
+          value={lowStockQ.isError ? '—' : lowStockQ.isLoading ? '…' : String(lowStock)}
+          sub={lowStock > 0 ? 'Need restocking' : 'All levels OK'}
+          icon={<WarningAmberIcon fontSize="small" />}
+          accent={lowStock > 0 ? '#e65100' : '#388e3c'}
+          chip={lowStock > 0 ? { label: 'Alert', color: 'warning' } : undefined}
+          loading={lowStockQ.isLoading}
+        />
+
         {hospitalEnabled && (
           <StatCard
-            title="Patients Today"
-            value={patientsQ.isError ? '—' : String(totalPatients)}
-            sub={
-              patientsArr.length > 0
-                ? `${patientsArr.length} doctor(s) active`
-                : 'No patients yet'
-            }
-            icon={<LocalHospitalIcon fontSize="small" />}
+            title="Total Patients"
+            value={patientsCountQ.isError ? '—' : patientsCountQ.isLoading ? '…' : String(patientsCountQ.data ?? 0)}
+            sub="Registered patients"
+            icon={<PeopleIcon fontSize="small" />}
             accent="#00897b"
-            loading={patientsQ.isLoading}
+            loading={patientsCountQ.isLoading}
+          />
+        )}
+
+        {hospitalEnabled && (
+          <StatCard
+            title="Total Doctors"
+            value={doctorsQ.isError ? '—' : doctorsQ.isLoading ? '…' : String(doctorsQ.data ?? 0)}
+            sub="Active doctors"
+            icon={<MedicalServicesIcon fontSize="small" />}
+            accent="#0277bd"
+            loading={doctorsQ.isLoading}
           />
         )}
       </Stack>
 
       {/* ── Bottom Row ── */}
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-        {/* Payment Methods */}
-        <Card sx={{ flex: 2, minWidth: 260 }}>
-          <CardContent>
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <PaymentIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-              <Typography variant="subtitle1">Payment Methods</Typography>
-            </Stack>
-
-            {paymentQ.isLoading && (
-              <Box display="flex" justifyContent="center" py={3}>
-                <CircularProgress size={24} />
-              </Box>
-            )}
-            {paymentQ.isError && (
-              <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
-                No payment data available
-              </Typography>
-            )}
-            {!paymentQ.isLoading && !paymentQ.isError && paymentArr.length === 0 && (
-              <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
-                No transactions today
-              </Typography>
-            )}
-            {paymentArr.length > 0 &&
-              paymentArr.map((pm, i) => (
-                <Box key={pm.method}>
-                  {i > 0 && <Divider sx={{ my: 1.5 }} />}
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ textTransform: 'capitalize' }}>
-                        {pm.method}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {pm.count} transaction{pm.count !== 1 ? 's' : ''}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body1" fontWeight={700}>
-                      {fmt(pm.total)}
-                    </Typography>
-                  </Stack>
-                </Box>
-              ))}
-          </CardContent>
-        </Card>
-
         {/* Sales Breakdown */}
-        <Card sx={{ flex: 1, minWidth: 220 }}>
+        <Card sx={{ flex: 1, minWidth: 260 }}>
           <CardContent>
             <Stack direction="row" alignItems="center" spacing={1} mb={2}>
               <BarChartIcon fontSize="small" sx={{ color: 'text.secondary' }} />
@@ -271,9 +260,9 @@ export function DashboardPage(): JSX.Element {
             {salesQ.data && (
               <Stack spacing={1.5}>
                 {[
-                  { label: 'Gross Sales', value: salesQ.data.grossSales, bold: false, negative: false },
-                  { label: 'Discounts', value: salesQ.data.discounts, bold: false, negative: true },
-                  { label: 'Tax Collected', value: salesQ.data.taxCollected, bold: false, negative: false },
+                  { label: 'Gross Sales', value: salesQ.data.grossSales, negative: false },
+                  { label: 'Discounts', value: salesQ.data.discounts, negative: true },
+                  { label: 'Tax Collected', value: salesQ.data.taxCollected, negative: false },
                 ].map(({ label, value, negative }) => (
                   <Stack key={label} direction="row" justifyContent="space-between">
                     <Typography variant="body2" color="text.secondary">
@@ -299,31 +288,41 @@ export function DashboardPage(): JSX.Element {
           </CardContent>
         </Card>
 
-        {/* Patients by Doctor — only if hospital enabled and has data */}
-        {hospitalEnabled && patientsArr.length > 0 && (
+        {/* Low Stock Alert detail — only when items need restocking */}
+        {!lowStockQ.isLoading && !lowStockQ.isError && lowStock > 0 && (
+          <Card sx={{ flex: 1, minWidth: 260 }}>
+            <CardContent>
+              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                <WarningAmberIcon fontSize="small" sx={{ color: 'warning.main' }} />
+                <Typography variant="subtitle1">Low Stock Alert</Typography>
+                <Chip size="small" label={`${lowStock} item${lowStock !== 1 ? 's' : ''}`} color="warning" sx={{ fontWeight: 600 }} />
+              </Stack>
+              <Typography variant="body2" color="text.secondary">
+                {lowStock} product{lowStock !== 1 ? 's are' : ' is'} at or below reorder level.
+                Go to <strong>Inventory → Stock Levels</strong> to review.
+              </Typography>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Hospital summary — only if hospital module enabled and patients exist */}
+        {hospitalEnabled && (patientsCountQ.data ?? 0) > 0 && (
           <Card sx={{ flex: 1, minWidth: 220 }}>
             <CardContent>
               <Stack direction="row" alignItems="center" spacing={1} mb={2}>
                 <LocalHospitalIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                <Typography variant="subtitle1">Patients by Doctor</Typography>
+                <Typography variant="subtitle1">Hospital Summary</Typography>
               </Stack>
               <Stack spacing={1.5}>
-                {patientsArr.map((d, i) => (
-                  <Box key={d.doctorId}>
-                    {i > 0 && <Divider sx={{ mb: 1.5 }} />}
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography variant="body2" color="text.secondary" sx={{ flex: 1, mr: 1 }}>
-                        {d.doctorName}
-                      </Typography>
-                      <Chip
-                        size="small"
-                        label={`${d.patientCount} patient${d.patientCount !== 1 ? 's' : ''}`}
-                        color="secondary"
-                        sx={{ fontWeight: 600 }}
-                      />
-                    </Stack>
-                  </Box>
-                ))}
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Total Patients</Typography>
+                  <Typography variant="body2" fontWeight={700}>{patientsCountQ.data ?? 0}</Typography>
+                </Stack>
+                <Divider />
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">Active Doctors</Typography>
+                  <Typography variant="body2" fontWeight={700}>{doctorsQ.data ?? 0}</Typography>
+                </Stack>
               </Stack>
             </CardContent>
           </Card>

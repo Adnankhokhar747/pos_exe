@@ -108,8 +108,7 @@ class StockTransfersController extends Controller
                 DB::statement(
                     "INSERT INTO stock_levels (warehouse_id, product_id, quantity_on_hand, quantity_reserved)
                      VALUES (?, ?, 0, 0)
-                     ON CONFLICT (warehouse_id, product_id)
-                     DO UPDATE SET quantity_on_hand = GREATEST(0, stock_levels.quantity_on_hand - ?)",
+                     ON DUPLICATE KEY UPDATE quantity_on_hand = GREATEST(0, quantity_on_hand - ?)",
                     [$transfer->from_warehouse_id, $line->product_id, $line->quantity]
                 );
 
@@ -150,8 +149,7 @@ class StockTransfersController extends Controller
                 DB::statement(
                     "INSERT INTO stock_levels (warehouse_id, product_id, quantity_on_hand, quantity_reserved)
                      VALUES (?, ?, ?, 0)
-                     ON CONFLICT (warehouse_id, product_id)
-                     DO UPDATE SET quantity_on_hand = stock_levels.quantity_on_hand + EXCLUDED.quantity_on_hand",
+                     ON DUPLICATE KEY UPDATE quantity_on_hand = quantity_on_hand + VALUES(quantity_on_hand)",
                     [$transfer->to_warehouse_id, $line->product_id, $line->quantity]
                 );
 

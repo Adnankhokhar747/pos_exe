@@ -72,8 +72,7 @@ class StockAdjustmentsController extends Controller
                 DB::statement(
                     "INSERT INTO stock_levels (warehouse_id, product_id, quantity_on_hand, quantity_reserved)
                      VALUES (?, ?, ?, 0)
-                     ON CONFLICT (warehouse_id, product_id)
-                     DO UPDATE SET quantity_on_hand = EXCLUDED.quantity_on_hand",
+                     ON DUPLICATE KEY UPDATE quantity_on_hand = VALUES(quantity_on_hand)",
                     [$warehouse->id, $line['productId'], $countedQty]
                 );
 

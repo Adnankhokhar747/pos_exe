@@ -19,8 +19,8 @@ class PatientsController extends Controller
             ->when(!$request->boolean('includeInactive'), fn($q) => $q->where('is_active', true))
             ->when($request->search, fn($q,$s) =>
                 $q->where(function($q) use ($s) {
-                    $q->where('name','ilike',"%{$s}%")
-                      ->orWhere('phone','ilike',"%{$s}%");
+                    $q->where('name','like',"%{$s}%")
+                      ->orWhere('phone','like',"%{$s}%");
                 })
             )
             ->orderBy('name')

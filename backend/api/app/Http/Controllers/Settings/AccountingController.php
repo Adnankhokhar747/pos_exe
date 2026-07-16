@@ -233,8 +233,13 @@ class AccountingController extends Controller
     public function getProfitSummary(Request $request)
     {
         $tenantId = $request->user()->tenant_id;
-        $from = $request->from ? new \DateTime($request->from) : new \DateTime('first day of this month');
-        $to   = $request->to   ? new \DateTime($request->to)   : new \DateTime();
+        $fromStr  = $request->from ?? null;
+        $toStr    = $request->to   ?? null;
+        // Expand date-only strings to full-day range
+        if ($fromStr && strlen($fromStr) === 10) $fromStr .= ' 00:00:00';
+        if ($toStr   && strlen($toStr)   === 10) $toStr   .= ' 23:59:59';
+        $from = $fromStr ?? now()->startOfMonth()->toDateTimeString();
+        $to   = $toStr   ?? now()->endOfDay()->toDateTimeString();
 
         $branchIds = Branch::where('tenant_id', $tenantId)
             ->when($request->branchId, fn($q,$b) => $q->where('id', $b))
@@ -250,7 +255,7 @@ class AccountingController extends Controller
             return $sum + ($inv->invoice_type === 'sale' ? (float)$inv->grand_total : -(float)$inv->grand_total);
         }, 0.0);
 
-        // COGS from stock ledger (table: stock_ledger, column: unit_cost_at_movement)
+        // COGS from stock ledger
         $cogs = DB::table('stock_ledger as sle')
             ->join('warehouses as w', 'w.id', '=', 'sle.warehouse_id')
             ->whereIn('w.branch_id', $branchIds)

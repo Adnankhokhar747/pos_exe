@@ -442,6 +442,10 @@ export function PosPage(): JSX.Element {
   });
 
   function addToCart(product: ProductWithStock): void {
+    if (product.quantityOnHand !== '∞' && Number(product.quantityOnHand) <= 0) {
+      setSnackbar(`"${product.name}" is out of stock.`);
+      return;
+    }
     setCart((current) => {
       const existing = current.find((line) => line.productId === product.id);
       if (existing) {

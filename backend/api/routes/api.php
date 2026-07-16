@@ -244,6 +244,8 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
     // ─── Reports ──────────────────────────────────────────────────────────────
     Route::prefix('reports')->middleware('permission:report.view')->group(function () {
         Route::get('/sales-summary', [ReportsController::class, 'salesSummary']);
+        Route::get('/payment-methods', [ReportsController::class, 'paymentMethods']);
+        Route::get('/dashboard-stats', [ReportsController::class, 'dashboardStats']);
         Route::get('/stock-valuation', [ReportsController::class, 'stockValuation']);
         Route::get('/inventory-valuation', [ReportsController::class, 'stockValuation']);
         Route::get('/top-products', [ReportsController::class, 'topProducts']);
@@ -354,6 +356,7 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
         });
 
         Route::prefix('reports')->middleware('permission:hospital.report.view')->group(function () {
+            Route::get('/counts', [HospitalReportsController::class, 'counts']);
             Route::get('/summary', [HospitalReportsController::class, 'summary']);
             Route::get('/daily-patients', [HospitalReportsController::class, 'dailyPatients']);
             Route::get('/monthly-patients', [HospitalReportsController::class, 'monthlyPatients']);

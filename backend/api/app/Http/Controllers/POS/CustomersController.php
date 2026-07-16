@@ -20,8 +20,8 @@ class CustomersController extends Controller
             ->where('is_walk_in', false)
             ->when($request->search, fn($q,$s) =>
                 $q->where(function($q) use ($s) {
-                    $q->where('name','ilike',"%{$s}%")
-                      ->orWhere('phone','ilike',"%{$s}%");
+                    $q->where('name','like',"%{$s}%")
+                      ->orWhere('phone','like',"%{$s}%");
                 })
             )
             ->orderBy('name')

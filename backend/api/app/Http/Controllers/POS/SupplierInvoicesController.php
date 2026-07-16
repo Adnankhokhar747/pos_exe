@@ -88,11 +88,6 @@ class SupplierInvoicesController extends Controller
 
     public function pay(Request $request, string $id)
     {
-        $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'method' => 'required|string',
-        ]);
-
         $tenantId    = $request->user()->tenant_id;
         $supplierIds = Supplier::where('tenant_id', $tenantId)->pluck('id');
 
@@ -101,13 +96,19 @@ class SupplierInvoicesController extends Controller
         if ($inv->status === 'paid') throw new ConflictException('Invoice is already paid.');
         if ($inv->status === 'voided') throw new ConflictException('Invoice is voided.');
 
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'method' => 'required|string',
+        ]);
+
         return DB::transaction(function () use ($request, $inv) {
-            $amount = (float) $request->amount;
+            $outstanding = (float)$inv->amount - (float)$inv->amount_paid;
+            $payAmount   = min((float)$request->amount, $outstanding);
 
             $payment = SupplierPayment::create([
                 'id'          => (string) \Illuminate\Support\Str::uuid(),
                 'supplier_id' => $inv->supplier_id,
-                'amount'      => $amount,
+                'amount'      => $payAmount,
                 'method'      => $request->method,
                 'paid_at'     => now(),
             ]);
@@ -115,22 +116,22 @@ class SupplierInvoicesController extends Controller
             SupplierPaymentAllocation::create([
                 'supplier_payment_id' => $payment->id,
                 'supplier_invoice_id' => $inv->id,
-                'amount_allocated'    => $amount,
+                'amount_allocated'    => $payAmount,
             ]);
 
-            $newAmountPaid = (float)$inv->amount_paid + $amount;
-            $newStatus = $newAmountPaid >= (float)$inv->amount ? 'paid' : 'partially_paid';
+            $newAmountPaid = (float)$inv->amount_paid + $payAmount;
+            $newStatus = $newAmountPaid >= (float)$inv->amount - 0.001 ? 'paid' : 'partially_paid';
             $inv->update(['amount_paid' => $newAmountPaid, 'status' => $newStatus]);
 
             $supplier = Supplier::find($inv->supplier_id);
             if ($supplier) {
-                $newBal = (float)$supplier->current_balance - $amount;
+                $newBal = (float)$supplier->current_balance - $payAmount;
                 $supplier->update(['current_balance' => $newBal]);
                 SupplierLedgerEntry::create([
                     'id'              => (string) \Illuminate\Support\Str::uuid(),
                     'supplier_id'     => $inv->supplier_id,
                     'entry_type'      => 'payment',
-                    'amount'          => -$amount,
+                    'amount'          => -$payAmount,
                     'balance_after'   => $newBal,
                     'reference_table' => 'supplier_payments',
                     'reference_id'    => $payment->id,

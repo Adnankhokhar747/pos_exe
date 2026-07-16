@@ -6,10 +6,30 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Appointment;
 use App\Models\AppointmentBill;
+use App\Models\Patient;
+use App\Models\Doctor;
 use Illuminate\Support\Facades\DB;
 
 class HospitalReportsController extends Controller
 {
+    public function counts(Request $request)
+    {
+        $tenantId = $request->user()->tenant_id;
+
+        $totalPatients = Patient::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->count();
+
+        $totalDoctors = Doctor::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->count();
+
+        return response()->json([
+            'totalPatients' => $totalPatients,
+            'totalDoctors'  => $totalDoctors,
+        ]);
+    }
+
     public function summary(Request $request)
     {
         $tenantId = $request->user()->tenant_id;
@@ -45,15 +65,14 @@ class HospitalReportsController extends Controller
             ->with('doctor:id,name')
             ->get();
 
-        return response()->json([
-            'date'         => $date,
-            'patientCount' => $appts->count(),
-            'byDoctor'     => $appts->groupBy('doctor_id')->map(fn($g) => [
-                'doctorId'   => $g->first()->doctor_id,
-                'doctorName' => $g->first()->doctor->name ?? 'Unknown',
-                'count'      => $g->count(),
-            ])->values(),
-        ]);
+        // Return flat array so dashboard can iterate directly
+        return response()->json(
+            $appts->groupBy('doctor_id')->map(fn($g) => [
+                'doctorId'    => $g->first()->doctor_id,
+                'doctorName'  => $g->first()->doctor->name ?? 'Unknown',
+                'patientCount'=> $g->count(),
+            ])->values()
+        );
     }
 
     public function monthlyPatients(Request $request)

@@ -21,8 +21,8 @@ class UsersController extends Controller
             ->with('roles')
             ->when($request->search, fn($q, $s) =>
                 $q->where(function($q) use ($s) {
-                    $q->where('full_name', 'ilike', "%{$s}%")
-                      ->orWhere('username', 'ilike', "%{$s}%");
+                    $q->where('full_name', 'like', "%{$s}%")
+                      ->orWhere('username', 'like', "%{$s}%");
                 })
             )
             ->orderBy('full_name')

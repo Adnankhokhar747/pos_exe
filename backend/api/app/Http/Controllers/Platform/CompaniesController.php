@@ -24,7 +24,7 @@ class CompaniesController extends Controller
     {
         $tenants = Tenant::with('subscription.plan')
             ->when($request->search, fn($q, $s) =>
-                $q->where('name', 'ilike', "%{$s}%")
+                $q->where('name', 'like', "%{$s}%")
             )
             ->orderBy('name')
             ->limit(200)

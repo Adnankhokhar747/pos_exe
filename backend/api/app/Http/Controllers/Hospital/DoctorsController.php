@@ -20,8 +20,8 @@ class DoctorsController extends Controller
             ->when(!$request->boolean('includeInactive'), fn($q) => $q->where('is_active', true))
             ->when($request->search, fn($q,$s) =>
                 $q->where(function($q) use ($s) {
-                    $q->where('name','ilike',"%{$s}%")
-                      ->orWhere('specialization','ilike',"%{$s}%");
+                    $q->where('name','like',"%{$s}%")
+                      ->orWhere('specialization','like',"%{$s}%");
                 })
             )
             ->orderBy('name')
