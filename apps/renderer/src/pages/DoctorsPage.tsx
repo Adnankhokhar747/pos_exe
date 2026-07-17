@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Box, Chip, IconButton, MenuItem, Snackbar, Stack, TextField, Typography } from '@mui/material';
+import { Box, Chip, IconButton, MenuItem, Paper, Snackbar, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '../api/client';
@@ -8,6 +10,7 @@ import { DataTable } from '../components/DataTable';
 import { AppModal } from '../components/AppModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PrimaryButton, SecondaryButton } from '../components/buttons';
+import { useAuth } from '../state/auth-context';
 
 const EMPTY_FORM = {
   name: '',
@@ -17,6 +20,7 @@ const EMPTY_FORM = {
   roomNumber: '',
   consultationFee: '0',
   linkedUserId: '',
+  maxDailyAppointments: '30',
 };
 
 const DAYS_OF_WEEK: DayOfWeek[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -25,7 +29,11 @@ type ScheduleSlotRow = { dayOfWeek: DayOfWeek; startTime: string; endTime: strin
 
 export function DoctorsPage(): JSX.Element {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [snackbar, setSnackbar] = useState<string | null>(null);
+
+  const bookingBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
+  const bookingUrl = user?.tenantId ? `${bookingBase}/book/?t=${user.tenantId}` : '';
 
   const doctorsQuery = useQuery({
     queryKey: ['doctors'],
@@ -106,7 +114,7 @@ export function DoctorsPage(): JSX.Element {
     mutationFn: () =>
       apiFetch(`/api/v1/hospital/doctors/${scheduleTarget?.id}/schedule`, {
         method: 'PATCH',
-        body: JSON.stringify({ slots: scheduleRows }),
+        body: JSON.stringify({ schedules: scheduleRows }),
       }),
     onSuccess: () => {
       setSnackbar('Schedule saved.');
@@ -126,6 +134,7 @@ export function DoctorsPage(): JSX.Element {
       roomNumber: doctor.roomNumber ?? '',
       consultationFee: doctor.consultationFee,
       linkedUserId: doctor.linkedUserId ?? '',
+      maxDailyAppointments: String(doctor.maxDailyAppointments ?? 30),
     });
   }
 
@@ -154,6 +163,50 @@ export function DoctorsPage(): JSX.Element {
         <Typography variant="h6">Doctors</Typography>
         <PrimaryButton onClick={() => setCreateOpen(true)}>Add Doctor</PrimaryButton>
       </Stack>
+
+      {bookingUrl && (
+        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: 'primary.light', bgcolor: 'primary.50', borderRadius: 2 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+            <Box>
+              <Typography variant="subtitle2" color="primary.main" fontWeight={700}>
+                🔗 Patient Booking Link
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.3 }}>
+                Share this link with patients so they can book appointments online
+              </Typography>
+            </Box>
+            <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: 'monospace', fontSize: '0.78rem',
+                  bgcolor: 'grey.100', px: 1.5, py: 0.75,
+                  borderRadius: 1, border: '1px solid', borderColor: 'grey.300',
+                  maxWidth: 340, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}
+              >
+                {bookingUrl}
+              </Typography>
+              <Tooltip title="Copy link">
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    navigator.clipboard.writeText(bookingUrl);
+                    setSnackbar('Booking link copied!');
+                  }}
+                >
+                  <ContentCopyIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Open in new tab">
+                <IconButton size="small" onClick={() => window.open(bookingUrl, '_blank')}>
+                  <OpenInNewIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </Stack>
+        </Paper>
+      )}
 
       <DataTable
         searchPlaceholder="Search doctors…"
@@ -230,6 +283,13 @@ export function DoctorsPage(): JSX.Element {
             onChange={(e) => setForm({ ...form, consultationFee: e.target.value })}
           />
           <TextField
+            label="Max Appointments Per Day"
+            type="number"
+            value={form.maxDailyAppointments}
+            onChange={(e) => setForm({ ...form, maxDailyAppointments: e.target.value })}
+            helperText="Online booking closes when this limit is reached"
+          />
+          <TextField
             select
             label="Linked User (optional)"
             value={form.linkedUserId}
@@ -279,6 +339,13 @@ export function DoctorsPage(): JSX.Element {
             onChange={(e) => setEditForm({ ...editForm, consultationFee: e.target.value })}
           />
           <TextField
+            label="Max Appointments Per Day"
+            type="number"
+            value={editForm.maxDailyAppointments}
+            onChange={(e) => setEditForm({ ...editForm, maxDailyAppointments: e.target.value })}
+            helperText="Online booking closes when this limit is reached"
+          />
+          <TextField
             select
             label="Linked User (optional)"
             value={editForm.linkedUserId}
@@ -309,7 +376,7 @@ export function DoctorsPage(): JSX.Element {
       >
         <Stack spacing={2} mt={0.5}>
           <Typography variant="body2" color="text.secondary">
-            Informational only — not enforced when booking appointments.
+            Sets which days of the week patients can book online. Days without a slot will be unavailable in the booking portal.
           </Typography>
           {scheduleRows.map((row, index) => (
             <Stack key={index} direction="row" spacing={1} alignItems="center">

@@ -35,6 +35,7 @@ class AuthController extends Controller
             'accessToken' => $token,
             'user' => [
                 'id'          => $user->id,
+                'tenantId'    => $user->tenant_id,
                 'username'    => $user->username,
                 'fullName'    => $user->full_name,
                 'permissions' => $permissions,
@@ -53,6 +54,7 @@ class AuthController extends Controller
 
         return response()->json([
             'id'          => $user->id,
+            'tenantId'    => $user->tenant_id,
             'username'    => $user->username,
             'fullName'    => $user->full_name,
             'permissions' => $permissions,

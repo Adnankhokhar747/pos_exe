@@ -40,6 +40,25 @@ use App\Http\Controllers\Settings\TenantSettingsController;
 use App\Http\Controllers\Settings\TaxTemplatesController;
 use App\Http\Controllers\Settings\CurrenciesController;
 use App\Http\Controllers\Backup\BackupController;
+use App\Http\Controllers\Booking\BookingAuthController;
+use App\Http\Controllers\Booking\BookingPublicController;
+use App\Http\Controllers\Booking\BookingAppointmentController;
+
+// ─── Online Patient Booking (public, no staff auth) ───────────────────────────
+Route::prefix('v1/booking')->group(function () {
+    Route::get('/default-tenant',  [BookingPublicController::class, 'defaultTenant']);
+    Route::post('/auth/register', [BookingAuthController::class, 'register']);
+    Route::post('/auth/login',    [BookingAuthController::class, 'login']);
+    Route::get('/doctors',        [BookingPublicController::class, 'doctors']);
+    Route::get('/doctors/{id}/availability', [BookingPublicController::class, 'availability']);
+
+    Route::middleware(\App\Http\Middleware\BookingAuthMiddleware::class)->group(function () {
+        Route::get('/auth/me',               [BookingAuthController::class, 'me']);
+        Route::get('/appointments',          [BookingAppointmentController::class, 'myAppointments']);
+        Route::post('/appointments',         [BookingAppointmentController::class, 'book']);
+        Route::post('/appointments/{id}/cancel', [BookingAppointmentController::class, 'cancel']);
+    });
+});
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 Route::prefix('v1/auth')->group(function () {

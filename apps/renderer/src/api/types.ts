@@ -1,5 +1,6 @@
 export interface AuthenticatedUser {
   id: string;
+  tenantId: string;
   username: string;
   fullName: string;
   permissions: string[];
@@ -537,6 +538,7 @@ export interface Doctor {
   email: string | null;
   roomNumber: string | null;
   consultationFee: string;
+  maxDailyAppointments: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

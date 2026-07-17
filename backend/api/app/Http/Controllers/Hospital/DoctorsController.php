@@ -51,7 +51,8 @@ class DoctorsController extends Controller
             'phone'           => $request->phone,
             'email'           => $request->email,
             'room_number'     => $request->roomNumber,
-            'consultation_fee'=> $request->consultationFee ?? 0,
+            'consultation_fee'        => $request->consultationFee ?? 0,
+            'max_daily_appointments'  => $request->maxDailyAppointments ?? 30,
         ]);
 
         return $doctor->load(['schedules','linkedUser']);
@@ -77,14 +78,15 @@ class DoctorsController extends Controller
         }
 
         $doctor->update(array_filter([
-            'linked_user_id'  => $request->linkedUserId,
-            'name'            => $request->name,
-            'specialization'  => $request->specialization,
-            'phone'           => $request->phone,
-            'email'           => $request->email,
-            'room_number'     => $request->roomNumber,
-            'consultation_fee'=> $request->consultationFee,
-            'is_active'       => $request->isActive,
+            'linked_user_id'         => $request->linkedUserId,
+            'name'                   => $request->name,
+            'specialization'         => $request->specialization,
+            'phone'                  => $request->phone,
+            'email'                  => $request->email,
+            'room_number'            => $request->roomNumber,
+            'consultation_fee'       => $request->consultationFee,
+            'is_active'              => $request->isActive,
+            'max_daily_appointments' => $request->maxDailyAppointments,
         ], fn($v) => $v !== null));
 
         return $doctor->load(['schedules','linkedUser']);

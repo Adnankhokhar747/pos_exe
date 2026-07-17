@@ -16,6 +16,7 @@ protected $table = 'doctors';
     protected $fillable = [
         'id','tenant_id','linked_user_id','name','specialization',
         'phone','email','room_number','consultation_fee','is_active',
+        'max_daily_appointments',
     ];
 
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
