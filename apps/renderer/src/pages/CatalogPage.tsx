@@ -13,6 +13,7 @@ import {
   Snackbar,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -90,6 +91,23 @@ function ProductFormFields({
   setVariantAttrs?: Dispatch<SetStateAction<VariantAttrDraft[]>>;
 }): JSX.Element {
   const parentCandidates = products.filter((p) => !p.isBundle && p.id !== excludeProductId);
+  const qc = useQueryClient();
+  const [addCatOpen, setAddCatOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+
+  const addCatMutation = useMutation({
+    mutationFn: () =>
+      apiFetch<Category>('/api/v1/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name: newCatName.trim() }),
+      }),
+    onSuccess: (created) => {
+      qc.invalidateQueries({ queryKey: ['categories'] });
+      setForm({ ...form, categoryId: created.id });
+      setNewCatName('');
+      setAddCatOpen(false);
+    },
+  });
 
   return (
     <Stack spacing={2}>
@@ -99,14 +117,57 @@ function ProductFormFields({
       </Stack>
       <TextField label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
       <TextField label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-      <TextField select label="Category" value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
-        <MenuItem value="">None</MenuItem>
-        {categories.map((category) => (
-          <MenuItem key={category.id} value={category.id}>
-            {category.name}
-          </MenuItem>
-        ))}
-      </TextField>
+
+      {/* Category + inline Add button */}
+      <Stack direction="row" spacing={1} alignItems="center">
+        <TextField
+          select
+          label="Category"
+          sx={{ flex: 1 }}
+          value={form.categoryId}
+          onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+        >
+          <MenuItem value="">None</MenuItem>
+          {categories.map((category) => (
+            <MenuItem key={category.id} value={category.id}>
+              {category.name}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Tooltip title="Add new category">
+          <IconButton onClick={() => setAddCatOpen(true)} sx={{ mt: 0.5 }}>
+            <AddIcon />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+
+      {/* Add Category mini-dialog */}
+      <AppModal
+        open={addCatOpen}
+        onClose={() => { setAddCatOpen(false); setNewCatName(''); }}
+        title="Add Category"
+        maxWidth="xs"
+        actions={
+          <>
+            <SecondaryButton onClick={() => { setAddCatOpen(false); setNewCatName(''); }}>Cancel</SecondaryButton>
+            <PrimaryButton
+              disabled={!newCatName.trim() || addCatMutation.isPending}
+              onClick={() => addCatMutation.mutate()}
+            >
+              Add
+            </PrimaryButton>
+          </>
+        }
+      >
+        <TextField
+          autoFocus
+          fullWidth
+          label="Category Name"
+          value={newCatName}
+          onChange={(e) => setNewCatName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && newCatName.trim()) addCatMutation.mutate(); }}
+        />
+      </AppModal>
       <Stack direction="row" spacing={2}>
         <TextField label="Cost Price" fullWidth value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
         <TextField label="Sale Price" fullWidth value={form.salePrice} onChange={(e) => setForm({ ...form, salePrice: e.target.value })} />
