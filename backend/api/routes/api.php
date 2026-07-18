@@ -397,17 +397,16 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
         });
 
         Route::prefix('agreements')->group(function () {
-            Route::get('/',                         [LeaseAgreementsController::class, 'index']);
-            Route::post('/',                        [LeaseAgreementsController::class, 'store'])->middleware('permission:lease.agreement.manage');
-            Route::get('/{id}',                     [LeaseAgreementsController::class, 'show']);
-            Route::patch('/{id}',                   [LeaseAgreementsController::class, 'update'])->middleware('permission:lease.agreement.manage');
-            Route::get('/{id}/payments',            [LeaseAgreementsController::class, 'payments']);
-            Route::post('/{id}/payments',           [LeaseAgreementsController::class, 'recordPayment'])->middleware('permission:lease.agreement.manage');
+            Route::get('/',    [LeaseAgreementsController::class, 'index']);
+            Route::post('/',   [LeaseAgreementsController::class, 'store'])->middleware('permission:lease.agreement.manage');
+            Route::get('/{id}',    [LeaseAgreementsController::class, 'show']);
+            Route::patch('/{id}',  [LeaseAgreementsController::class, 'update'])->middleware('permission:lease.agreement.manage');
+            Route::post('/{id}/installments/{installmentId}/pay', [LeaseAgreementsController::class, 'recordInstallmentPayment'])->middleware('permission:lease.agreement.manage');
         });
 
         Route::prefix('reports')->middleware('permission:lease.report.view')->group(function () {
             Route::get('/summary',  [LeaseReportsController::class, 'summary']);
-            Route::get('/expiring', [LeaseReportsController::class, 'expiring']);
+            Route::get('/upcoming', [LeaseReportsController::class, 'upcoming']);
             Route::get('/payments', [LeaseReportsController::class, 'payments']);
         });
     });

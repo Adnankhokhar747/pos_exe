@@ -19,7 +19,7 @@ import { AppointmentsPage } from './pages/AppointmentsPage';
 import { TokenQueuePage } from './pages/TokenQueuePage';
 import { DoctorReportsPage } from './pages/DoctorReportsPage';
 import { LeaseDashboardPage } from './pages/LeaseDashboardPage';
-import { LeasePropertiesPage } from './pages/LeasePropertiesPage';
+
 import { LeaseAgreementsPage } from './pages/LeaseAgreementsPage';
 import { LeaseReportsPage } from './pages/LeaseReportsPage';
 import { AppShell } from './layout/AppShell';
@@ -219,7 +219,7 @@ export function App(): JSX.Element {
         }
       />
       <Route path="/lease/dashboard" element={<RequireAuth requiredModule="lease"><LeaseDashboardPage /></RequireAuth>} />
-      <Route path="/lease/properties" element={<RequireAuth permission="lease.property.manage" requiredModule="lease"><LeasePropertiesPage /></RequireAuth>} />
+
       <Route path="/lease/agreements" element={<RequireAuth permission="lease.agreement.manage" requiredModule="lease"><LeaseAgreementsPage /></RequireAuth>} />
       <Route path="/lease/reports"    element={<RequireAuth permission="lease.report.view"     requiredModule="lease"><LeaseReportsPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

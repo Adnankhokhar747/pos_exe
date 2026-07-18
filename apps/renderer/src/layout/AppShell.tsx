@@ -127,10 +127,9 @@ const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     groupIcon: <HomeWorkIcon fontSize="small" />,
     items: [
-      { path: '/lease/dashboard',   label: 'Dashboard',  icon: <DashboardIcon fontSize="small" />,  requiredModule: 'lease' },
-      { path: '/lease/properties',  label: 'Properties', icon: <HomeWorkIcon fontSize="small" />,   requiredModule: 'lease', requiredPermission: 'lease.property.manage' },
-      { path: '/lease/agreements',  label: 'Agreements', icon: <HandshakeIcon fontSize="small" />,  requiredModule: 'lease', requiredPermission: 'lease.agreement.manage' },
-      { path: '/lease/reports',     label: 'Reports',    icon: <PaymentsIcon fontSize="small" />,   requiredModule: 'lease', requiredPermission: 'lease.report.view' },
+      { path: '/lease/dashboard',   label: 'Dashboard',   icon: <DashboardIcon fontSize="small" />,   requiredModule: 'lease' },
+      { path: '/lease/agreements',  label: 'Agreements',  icon: <HandshakeIcon fontSize="small" />,  requiredModule: 'lease', requiredPermission: 'lease.agreement.manage' },
+      { path: '/lease/reports',     label: 'Reports',     icon: <PaymentsIcon fontSize="small" />,   requiredModule: 'lease', requiredPermission: 'lease.report.view' },
     ],
   },
   {

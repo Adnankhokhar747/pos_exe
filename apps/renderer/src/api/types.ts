@@ -704,54 +704,76 @@ export interface BackupStatus {
 
 // ─── Lease Module ─────────────────────────────────────────────────────────────
 
-export interface LeaseProperty {
+export type LeaseCategory = 'property' | 'vehicle' | 'appliance' | 'electronics' | 'other';
+export type LeaseFrequency = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+export type LeaseStatus = 'active' | 'completed' | 'cancelled' | 'defaulted';
+export type LeaseInstallmentStatus = 'pending' | 'paid' | 'partial' | 'overdue';
+
+export interface LeaseInstallment {
   id: string;
-  name: string;
-  type: 'residential' | 'commercial' | 'equipment' | 'other';
-  address: string | null;
-  description: string | null;
-  baseRent: string;
-  isActive: boolean;
-  createdAt: string;
+  installmentNumber: number;
+  dueDate: string;
+  amount: number;
+  paidAmount: number | null;
+  paidDate: string | null;
+  paymentMethod: string | null;
+  referenceNumber: string | null;
+  status: LeaseInstallmentStatus;
+  notes: string | null;
+}
+
+export interface LeaseAgreementSummary {
+  totalPaid: number;
+  totalPending: number;
+  paidCount: number;
+  pendingCount: number;
+  overdueCount: number;
 }
 
 export interface LeaseAgreement {
   id: string;
-  propertyId: string;
+  title: string;
+  category: LeaseCategory;
   customerId: string;
-  property: { id: string; name: string; type: string; address: string | null } | null;
-  customer: { id: string; name: string; phone: string | null } | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  totalAmount: number;
+  downPayment: number;
+  financedAmount: number;
+  installmentCount: number;
+  installmentAmount: number;
+  frequency: LeaseFrequency;
   startDate: string;
-  endDate: string;
-  rentAmount: string;
-  rentFrequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  depositAmount: string;
-  status: 'pending' | 'active' | 'expired' | 'terminated';
+  firstInstallmentDate: string;
+  status: LeaseStatus;
   notes: string | null;
   createdAt: string;
-}
-
-export interface LeasePayment {
-  id: string;
-  leaseId: string;
-  amount: string;
-  dueDate: string | null;
-  paidDate: string | null;
-  periodStart: string;
-  periodEnd: string;
-  paymentMethod: string | null;
-  status: 'pending' | 'paid' | 'overdue' | 'waived';
-  referenceNumber: string | null;
-  notes: string | null;
-  createdAt: string;
+  paidInstallments?: number;
+  totalPaid?: number;
+  installments?: LeaseInstallment[];
+  summary?: LeaseAgreementSummary;
 }
 
 export interface LeaseSummary {
-  activeLeases: number;
-  pendingLeases: number;
-  terminatedLeases: number;
-  expiringSoon: number;
-  totalCollected: string;
-  overduePayments: number;
-  monthlyRevenue: string;
+  activeAgreements: number;
+  completedAgreements: number;
+  totalFinanced: number;
+  totalCollected: number;
+  totalPending: number;
+  overdueInstallments: number;
+  monthlyCollected: number;
+}
+
+export interface LeaseUpcomingInstallment {
+  id: string;
+  agreementId: string;
+  agreementTitle: string;
+  category: LeaseCategory;
+  customerName: string | null;
+  customerPhone: string | null;
+  installmentNumber: number;
+  dueDate: string;
+  amount: number;
+  status: LeaseInstallmentStatus;
+  daysUntilDue: number;
 }

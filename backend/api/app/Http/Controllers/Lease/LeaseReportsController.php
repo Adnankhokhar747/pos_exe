@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Lease;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\LeaseAgreement;
-use App\Models\LeasePayment;
+use App\Models\LeaseInstallment;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class LeaseReportsController extends Controller
 {
@@ -17,67 +17,63 @@ class LeaseReportsController extends Controller
 
         $agreements = LeaseAgreement::where('tenant_id', $tenantId)->get();
 
-        $active     = $agreements->where('status', 'active')->count();
-        $pending    = $agreements->where('status', 'pending')->count();
-        $terminated = $agreements->whereIn('status', ['terminated', 'expired'])->count();
+        $active    = $agreements->where('status', 'active')->count();
+        $completed = $agreements->where('status', 'completed')->count();
 
-        // Expiring in next 30 days
-        $expiringSoon = $agreements->where('status', 'active')
-            ->filter(fn($a) => $a->end_date && $a->end_date->gte(Carbon::today()) && $a->end_date->lte(Carbon::today()->addDays(30)))
-            ->count();
+        $totalFinanced = $agreements->sum('financed_amount');
 
-        // Total rent collected
-        $totalCollected = LeasePayment::where('tenant_id', $tenantId)
-            ->where('status', 'paid')
-            ->sum('amount');
+        $installments = LeaseInstallment::where('tenant_id', $tenantId)->get();
+        $totalCollected = $installments->where('status', 'paid')->sum('paid_amount');
+        $totalPending   = $installments->whereIn('status', ['pending', 'partial', 'overdue'])->sum('amount');
+        $overdue        = $installments->where('status', 'overdue')->count();
 
-        // Overdue payments (due_date passed, not paid)
-        $overdue = LeasePayment::where('tenant_id', $tenantId)
-            ->where('status', 'pending')
-            ->where('due_date', '<', $today)
-            ->count();
-
-        // Monthly revenue (current month)
         $monthStart = Carbon::today()->startOfMonth()->toDateString();
         $monthEnd   = Carbon::today()->endOfMonth()->toDateString();
-        $monthlyRevenue = LeasePayment::where('tenant_id', $tenantId)
+        $monthlyCollected = LeaseInstallment::where('tenant_id', $tenantId)
             ->where('status', 'paid')
             ->whereBetween('paid_date', [$monthStart, $monthEnd])
-            ->sum('amount');
+            ->sum('paid_amount');
 
         return response()->json([
-            'activeLeases'    => $active,
-            'pendingLeases'   => $pending,
-            'terminatedLeases'=> $terminated,
-            'expiringSoon'    => $expiringSoon,
-            'totalCollected'  => $totalCollected,
-            'overduePayments' => $overdue,
-            'monthlyRevenue'  => $monthlyRevenue,
+            'activeAgreements'    => $active,
+            'completedAgreements' => $completed,
+            'totalFinanced'       => (float) $totalFinanced,
+            'totalCollected'      => (float) $totalCollected,
+            'totalPending'        => (float) $totalPending,
+            'overdueInstallments' => $overdue,
+            'monthlyCollected'    => (float) $monthlyCollected,
         ]);
     }
 
-    public function expiring(Request $request)
+    public function upcoming(Request $request)
     {
         $tenantId = $request->user()->tenant_id;
         $days     = (int) $request->input('days', 30);
 
-        $agreements = LeaseAgreement::where('tenant_id', $tenantId)
-            ->where('status', 'active')
-            ->whereBetween('end_date', [Carbon::today()->toDateString(), Carbon::today()->addDays($days)->toDateString()])
-            ->with(['property:id,name,type', 'customer:id,name,phone'])
-            ->orderBy('end_date')
+        $from = Carbon::today()->toDateString();
+        $to   = Carbon::today()->addDays($days)->toDateString();
+
+        $installments = LeaseInstallment::where('tenant_id', $tenantId)
+            ->whereIn('status', ['pending', 'overdue'])
+            ->whereBetween('due_date', [$from, $to])
+            ->with(['agreement.customer:id,name,phone'])
+            ->orderBy('due_date')
             ->get()
-            ->map(fn($a) => [
-                'id'           => $a->id,
-                'property'     => $a->property ? ['id' => $a->property->id, 'name' => $a->property->name, 'type' => $a->property->type] : null,
-                'customer'     => $a->customer ? ['id' => $a->customer->id, 'name' => $a->customer->name, 'phone' => $a->customer->phone] : null,
-                'endDate'      => $a->end_date?->toDateString(),
-                'rentAmount'   => $a->rent_amount,
-                'rentFrequency'=> $a->rent_frequency,
-                'daysLeft'     => Carbon::today()->diffInDays($a->end_date, false),
+            ->map(fn($i) => [
+                'id'                => $i->id,
+                'agreementId'       => $i->agreement_id,
+                'agreementTitle'    => $i->agreement?->title,
+                'category'          => $i->agreement?->category,
+                'customerName'      => $i->agreement?->customer?->name,
+                'customerPhone'     => $i->agreement?->customer?->phone,
+                'installmentNumber' => $i->installment_number,
+                'dueDate'           => $i->due_date?->toDateString(),
+                'amount'            => (float) $i->amount,
+                'status'            => $i->status,
+                'daysUntilDue'      => Carbon::today()->diffInDays($i->due_date, false),
             ]);
 
-        return response()->json($agreements);
+        return response()->json($installments);
     }
 
     public function payments(Request $request)
@@ -92,23 +88,26 @@ class LeaseReportsController extends Controller
         $from = $request->input('from', Carbon::today()->startOfMonth()->toDateString());
         $to   = $request->input('to',   Carbon::today()->endOfMonth()->toDateString());
 
-        $payments = LeasePayment::where('tenant_id', $tenantId)
-            ->whereBetween('paid_date', [$from, $to])
+        $installments = LeaseInstallment::where('tenant_id', $tenantId)
             ->where('status', 'paid')
-            ->with(['lease.property:id,name', 'lease.customer:id,name'])
+            ->whereBetween('paid_date', [$from, $to])
+            ->with(['agreement.customer:id,name'])
             ->orderByDesc('paid_date')
             ->get()
-            ->map(fn($p) => [
-                'id'            => $p->id,
-                'amount'        => $p->amount,
-                'paidDate'      => $p->paid_date?->toDateString(),
-                'periodStart'   => $p->period_start?->toDateString(),
-                'periodEnd'     => $p->period_end?->toDateString(),
-                'paymentMethod' => $p->payment_method,
-                'property'      => $p->lease?->property ? ['name' => $p->lease->property->name] : null,
-                'customer'      => $p->lease?->customer ? ['name' => $p->lease->customer->name] : null,
+            ->map(fn($i) => [
+                'id'                => $i->id,
+                'agreementTitle'    => $i->agreement?->title,
+                'category'          => $i->agreement?->category,
+                'customerName'      => $i->agreement?->customer?->name,
+                'installmentNumber' => $i->installment_number,
+                'dueDate'           => $i->due_date?->toDateString(),
+                'paidDate'          => $i->paid_date?->toDateString(),
+                'amount'            => (float) $i->amount,
+                'paidAmount'        => (float) $i->paid_amount,
+                'paymentMethod'     => $i->payment_method,
+                'referenceNumber'   => $i->reference_number,
             ]);
 
-        return response()->json($payments);
+        return response()->json($installments);
     }
 }

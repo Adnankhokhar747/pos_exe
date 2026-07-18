@@ -7,35 +7,32 @@ use Illuminate\Database\Eloquent\Model;
 class LeaseAgreement extends Model
 {
     protected $table = 'lease_agreements';
-
+    protected $keyType = 'string';
     public $incrementing = false;
-    protected $keyType   = 'string';
 
     protected $fillable = [
-        'id', 'tenant_id', 'property_id', 'customer_id',
-        'start_date', 'end_date', 'rent_amount', 'rent_frequency',
-        'deposit_amount', 'status', 'notes', 'created_by',
+        'id', 'tenant_id', 'title', 'category', 'customer_id',
+        'total_amount', 'down_payment', 'financed_amount',
+        'installment_count', 'installment_amount', 'frequency',
+        'start_date', 'first_installment_date', 'status', 'notes', 'created_by',
     ];
 
     protected $casts = [
-        'rent_amount'    => 'decimal:4',
-        'deposit_amount' => 'decimal:4',
-        'start_date'     => 'date',
-        'end_date'       => 'date',
+        'start_date'             => 'date',
+        'first_installment_date' => 'date',
+        'total_amount'           => 'decimal:2',
+        'down_payment'           => 'decimal:2',
+        'financed_amount'        => 'decimal:2',
+        'installment_amount'     => 'decimal:2',
     ];
-
-    public function property()
-    {
-        return $this->belongsTo(LeaseProperty::class, 'property_id');
-    }
 
     public function customer()
     {
-        return $this->belongsTo(Customer::class, 'customer_id');
+        return $this->belongsTo(Customer::class);
     }
 
-    public function payments()
+    public function installments()
     {
-        return $this->hasMany(LeasePayment::class, 'lease_id');
+        return $this->hasMany(LeaseInstallment::class, 'agreement_id')->orderBy('installment_number');
     }
 }

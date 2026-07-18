@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Box, Chip, MenuItem, Snackbar, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '../api/client';
-import type { LeaseProperty } from '../api/types';
+interface LeaseProperty { id: string; name: string; type: string; address: string | null; description: string | null; baseRent: string; isActive: boolean; createdAt: string; }
 import { DataTable } from '../components/DataTable';
 import { AppModal } from '../components/AppModal';
 import { PrimaryButton, SecondaryButton } from '../components/buttons';

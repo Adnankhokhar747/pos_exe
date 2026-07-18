@@ -3,219 +3,252 @@
 namespace App\Http\Controllers\Lease;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use App\Models\LeaseAgreement;
-use App\Models\LeasePayment;
+use App\Models\LeaseInstallment;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class LeaseAgreementsController extends Controller
 {
     public function index(Request $request)
     {
         $tenantId = $request->user()->tenant_id;
-        $query    = LeaseAgreement::where('tenant_id', $tenantId)
-            ->with(['property:id,name,type,address', 'customer:id,name,phone']);
 
-        if ($request->has('status')) {
+        $query = LeaseAgreement::where('tenant_id', $tenantId)
+            ->with('customer:id,name,phone');
+
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        if ($request->has('propertyId')) {
-            $query->where('property_id', $request->propertyId);
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+        if ($request->filled('customerId')) {
+            $query->where('customer_id', $request->customerId);
         }
 
+        $agreements = $query->orderByDesc('created_at')->get();
+
+        // Attach paid-count summary per agreement
+        $agreementIds = $agreements->pluck('id');
+        $paidCounts = LeaseInstallment::whereIn('agreement_id', $agreementIds)
+            ->where('status', 'paid')
+            ->select('agreement_id', DB::raw('COUNT(*) as paid_count'), DB::raw('SUM(paid_amount) as total_paid'))
+            ->groupBy('agreement_id')
+            ->pluck(null, 'agreement_id');
+
         return response()->json(
-            $query->orderByDesc('start_date')->get()->map(fn($a) => $this->format($a))
+            $agreements->map(fn($a) => array_merge(
+                $this->format($a),
+                [
+                    'paidInstallments' => (int) ($paidCounts[$a->id]->paid_count ?? 0),
+                    'totalPaid'        => (float) ($paidCounts[$a->id]->total_paid ?? 0),
+                ]
+            ))
         );
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'propertyId'    => 'required|uuid',
-            'customerId'    => 'required|uuid',
-            'startDate'     => 'required|date',
-            'endDate'       => 'required|date|after:startDate',
-            'rentAmount'    => 'required|numeric|min:0',
-            'rentFrequency' => 'required|in:daily,weekly,monthly,yearly',
-            'depositAmount' => 'nullable|numeric|min:0',
-            'notes'         => 'nullable|string',
+        $validated = $request->validate([
+            'title'                => 'required|string|max:255',
+            'category'             => 'required|in:property,vehicle,appliance,electronics,other',
+            'customerId'           => 'required|uuid',
+            'totalAmount'          => 'required|numeric|min:0.01',
+            'downPayment'          => 'nullable|numeric|min:0',
+            'installmentCount'     => 'required|integer|min:1|max:600',
+            'frequency'            => 'required|in:weekly,monthly,quarterly,yearly',
+            'startDate'            => 'required|date',
+            'firstInstallmentDate' => 'required|date',
+            'notes'                => 'nullable|string',
         ]);
 
-        $tenantId = $request->user()->tenant_id;
+        $tenantId       = $request->user()->tenant_id;
+        $downPayment    = (float) ($validated['downPayment'] ?? 0);
+        $totalAmount    = (float) $validated['totalAmount'];
+        $financedAmount = max(0, $totalAmount - $downPayment);
+        $count          = (int) $validated['installmentCount'];
+        $baseAmt        = $count > 0 ? round($financedAmount / $count, 2) : 0;
+        $lastAmt        = round($financedAmount - ($baseAmt * ($count - 1)), 2);
 
-        // Verify property belongs to this tenant
-        $property = \App\Models\LeaseProperty::where('id', $request->propertyId)
-            ->where('tenant_id', $tenantId)
-            ->firstOrFail();
+        $agreementId = Str::uuid()->toString();
 
-        // Check property not already actively leased for overlapping dates
-        $overlap = LeaseAgreement::where('property_id', $request->propertyId)
-            ->whereIn('status', ['pending', 'active'])
-            ->where(function ($q) use ($request) {
-                $q->whereBetween('start_date', [$request->startDate, $request->endDate])
-                  ->orWhereBetween('end_date', [$request->startDate, $request->endDate])
-                  ->orWhere(function ($q2) use ($request) {
-                      $q2->where('start_date', '<=', $request->startDate)
-                         ->where('end_date', '>=', $request->endDate);
-                  });
-            })->exists();
+        DB::transaction(function () use (
+            $agreementId, $tenantId, $validated,
+            $downPayment, $totalAmount, $financedAmount,
+            $count, $baseAmt, $lastAmt, $request
+        ) {
+            LeaseAgreement::create([
+                'id'                     => $agreementId,
+                'tenant_id'              => $tenantId,
+                'title'                  => $validated['title'],
+                'category'               => $validated['category'],
+                'customer_id'            => $validated['customerId'],
+                'total_amount'           => $totalAmount,
+                'down_payment'           => $downPayment,
+                'financed_amount'        => $financedAmount,
+                'installment_count'      => $count,
+                'installment_amount'     => $baseAmt,
+                'frequency'              => $validated['frequency'],
+                'start_date'             => $validated['startDate'],
+                'first_installment_date' => $validated['firstInstallmentDate'],
+                'status'                 => 'active',
+                'notes'                  => $validated['notes'] ?? null,
+                'created_by'             => $request->user()->id,
+            ]);
 
-        if ($overlap) {
-            return response()->json([
-                'error'   => 'overlap',
-                'message' => 'This property already has an active lease overlapping the selected dates.',
-            ], 422);
-        }
+            $dueDate = Carbon::parse($validated['firstInstallmentDate']);
+            for ($i = 1; $i <= $count; $i++) {
+                LeaseInstallment::create([
+                    'id'                 => Str::uuid()->toString(),
+                    'tenant_id'          => $tenantId,
+                    'agreement_id'       => $agreementId,
+                    'installment_number' => $i,
+                    'due_date'           => $dueDate->toDateString(),
+                    'amount'             => ($i === $count) ? $lastAmt : $baseAmt,
+                    'status'             => 'pending',
+                ]);
 
-        $agreement = LeaseAgreement::create([
-            'id'             => (string) Str::uuid(),
-            'tenant_id'      => $tenantId,
-            'property_id'    => $request->propertyId,
-            'customer_id'    => $request->customerId,
-            'start_date'     => $request->startDate,
-            'end_date'       => $request->endDate,
-            'rent_amount'    => $request->rentAmount,
-            'rent_frequency' => $request->rentFrequency,
-            'deposit_amount' => $request->depositAmount ?? 0,
-            'status'         => 'active',
-            'notes'          => $request->notes,
-            'created_by'     => $request->user()->id,
-        ]);
+                switch ($validated['frequency']) {
+                    case 'weekly':    $dueDate->addWeek();    break;
+                    case 'monthly':   $dueDate->addMonth();   break;
+                    case 'quarterly': $dueDate->addMonths(3); break;
+                    case 'yearly':    $dueDate->addYear();    break;
+                }
+            }
+        });
 
-        return response()->json($this->format($agreement->load(['property:id,name,type,address', 'customer:id,name,phone'])), 201);
+        $agreement = LeaseAgreement::with('customer:id,name,phone')->findOrFail($agreementId);
+        return response()->json($this->format($agreement), 201);
     }
 
     public function show(Request $request, string $id)
     {
-        $agreement = LeaseAgreement::where('id', $id)
-            ->where('tenant_id', $request->user()->tenant_id)
-            ->with(['property:id,name,type,address', 'customer:id,name,phone', 'payments'])
-            ->firstOrFail();
+        $tenantId  = $request->user()->tenant_id;
+        $agreement = LeaseAgreement::where('tenant_id', $tenantId)
+            ->with(['customer:id,name,phone', 'installments'])
+            ->findOrFail($id);
 
-        $data             = $this->format($agreement);
-        $data['payments'] = $agreement->payments->map(fn($p) => $this->formatPayment($p))->values();
+        // Auto-mark overdue
+        $today = Carbon::today()->toDateString();
+        LeaseInstallment::where('agreement_id', $id)
+            ->where('status', 'pending')
+            ->where('due_date', '<', $today)
+            ->update(['status' => 'overdue', 'updated_at' => now()]);
+
+        // Refresh installments after potential overdue update
+        $installments = LeaseInstallment::where('agreement_id', $id)
+            ->orderBy('installment_number')
+            ->get();
+
+        $paid    = $installments->where('status', 'paid');
+        $pending = $installments->whereIn('status', ['pending', 'partial', 'overdue']);
+
+        $data = $this->format($agreement);
+        $data['installments'] = $installments->map(fn($i) => $this->formatInstallment($i));
+        $data['summary'] = [
+            'totalPaid'    => (float) $paid->sum('paid_amount'),
+            'totalPending' => (float) $pending->sum('amount'),
+            'paidCount'    => $paid->count(),
+            'pendingCount' => $pending->count(),
+            'overdueCount' => $installments->where('status', 'overdue')->count(),
+        ];
 
         return response()->json($data);
     }
 
     public function update(Request $request, string $id)
     {
-        $agreement = LeaseAgreement::where('id', $id)
-            ->where('tenant_id', $request->user()->tenant_id)
-            ->firstOrFail();
+        $agreement = LeaseAgreement::where('tenant_id', $request->user()->tenant_id)
+            ->findOrFail($id);
 
-        $request->validate([
-            'status'         => 'sometimes|in:pending,active,expired,terminated',
-            'notes'          => 'nullable|string',
-            'endDate'        => 'sometimes|date',
-            'rentAmount'     => 'sometimes|numeric|min:0',
-            'depositAmount'  => 'sometimes|numeric|min:0',
+        $validated = $request->validate([
+            'status' => 'sometimes|in:active,completed,cancelled,defaulted',
+            'title'  => 'sometimes|string|max:255',
+            'notes'  => 'nullable|string',
         ]);
 
-        $data = [];
-        if ($request->has('status'))        $data['status']         = $request->status;
-        if ($request->has('notes'))         $data['notes']          = $request->notes;
-        if ($request->has('endDate'))       $data['end_date']       = $request->endDate;
-        if ($request->has('rentAmount'))    $data['rent_amount']    = $request->rentAmount;
-        if ($request->has('depositAmount')) $data['deposit_amount'] = $request->depositAmount;
+        $agreement->update(array_filter($validated, fn($v) => $v !== null));
 
-        $agreement->update($data);
-
-        return response()->json($this->format($agreement->fresh()->load(['property:id,name,type,address', 'customer:id,name,phone'])));
+        return response()->json($this->format($agreement->fresh()->load('customer:id,name,phone')));
     }
 
-    public function recordPayment(Request $request, string $id)
+    public function recordInstallmentPayment(Request $request, string $agreementId, string $installmentId)
     {
-        $agreement = LeaseAgreement::where('id', $id)
-            ->where('tenant_id', $request->user()->tenant_id)
-            ->firstOrFail();
+        $tenantId    = $request->user()->tenant_id;
+        $installment = LeaseInstallment::where('tenant_id', $tenantId)
+            ->where('agreement_id', $agreementId)
+            ->findOrFail($installmentId);
 
-        $request->validate([
-            'amount'          => 'required|numeric|min:0.01',
+        $validated = $request->validate([
+            'paidAmount'      => 'required|numeric|min:0.01',
             'paidDate'        => 'required|date',
-            'periodStart'     => 'required|date',
-            'periodEnd'       => 'required|date|after_or_equal:periodStart',
             'paymentMethod'   => 'nullable|string|max:50',
             'referenceNumber' => 'nullable|string|max:100',
             'notes'           => 'nullable|string',
         ]);
 
-        $payment = LeasePayment::create([
-            'id'               => (string) Str::uuid(),
-            'tenant_id'        => $agreement->tenant_id,
-            'lease_id'         => $agreement->id,
-            'amount'           => $request->amount,
-            'due_date'         => $request->periodEnd,
-            'paid_date'        => $request->paidDate,
-            'period_start'     => $request->periodStart,
-            'period_end'       => $request->periodEnd,
-            'payment_method'   => $request->paymentMethod,
-            'status'           => 'paid',
-            'reference_number' => $request->referenceNumber,
-            'notes'            => $request->notes,
+        $status = ((float) $validated['paidAmount'] >= (float) $installment->amount) ? 'paid' : 'partial';
+
+        $installment->update([
+            'paid_amount'      => $validated['paidAmount'],
+            'paid_date'        => $validated['paidDate'],
+            'payment_method'   => $validated['paymentMethod'] ?? null,
+            'reference_number' => $validated['referenceNumber'] ?? null,
+            'status'           => $status,
+            'notes'            => $validated['notes'] ?? null,
         ]);
 
-        return response()->json($this->formatPayment($payment), 201);
-    }
+        // Auto-complete agreement when all installments are paid
+        $unpaidCount = LeaseInstallment::where('agreement_id', $agreementId)
+            ->whereNotIn('status', ['paid'])
+            ->count();
 
-    public function payments(Request $request, string $id)
-    {
-        $agreement = LeaseAgreement::where('id', $id)
-            ->where('tenant_id', $request->user()->tenant_id)
-            ->firstOrFail();
+        if ($unpaidCount === 0) {
+            LeaseAgreement::where('id', $agreementId)->update(['status' => 'completed']);
+        }
 
-        $payments = LeasePayment::where('lease_id', $id)
-            ->orderByDesc('paid_date')
-            ->get()
-            ->map(fn($p) => $this->formatPayment($p));
-
-        return response()->json($payments);
+        return response()->json($this->formatInstallment($installment->fresh()));
     }
 
     private function format(LeaseAgreement $a): array
     {
         return [
-            'id'            => $a->id,
-            'propertyId'    => $a->property_id,
-            'customerId'    => $a->customer_id,
-            'property'      => $a->property ? [
-                'id'      => $a->property->id,
-                'name'    => $a->property->name,
-                'type'    => $a->property->type,
-                'address' => $a->property->address,
-            ] : null,
-            'customer'      => $a->customer ? [
-                'id'    => $a->customer->id,
-                'name'  => $a->customer->name,
-                'phone' => $a->customer->phone,
-            ] : null,
-            'startDate'     => $a->start_date?->toDateString(),
-            'endDate'       => $a->end_date?->toDateString(),
-            'rentAmount'    => $a->rent_amount,
-            'rentFrequency' => $a->rent_frequency,
-            'depositAmount' => $a->deposit_amount,
-            'status'        => $a->status,
-            'notes'         => $a->notes,
-            'createdAt'     => $a->created_at?->toISOString(),
+            'id'                   => $a->id,
+            'title'                => $a->title,
+            'category'             => $a->category,
+            'customerId'           => $a->customer_id,
+            'customerName'         => $a->customer?->name,
+            'customerPhone'        => $a->customer?->phone,
+            'totalAmount'          => (float) $a->total_amount,
+            'downPayment'          => (float) $a->down_payment,
+            'financedAmount'       => (float) $a->financed_amount,
+            'installmentCount'     => (int) $a->installment_count,
+            'installmentAmount'    => (float) $a->installment_amount,
+            'frequency'            => $a->frequency,
+            'startDate'            => $a->start_date?->toDateString(),
+            'firstInstallmentDate' => $a->first_installment_date?->toDateString(),
+            'status'               => $a->status,
+            'notes'                => $a->notes,
+            'createdAt'            => $a->created_at?->toISOString(),
         ];
     }
 
-    private function formatPayment(LeasePayment $p): array
+    private function formatInstallment(LeaseInstallment $i): array
     {
         return [
-            'id'              => $p->id,
-            'leaseId'         => $p->lease_id,
-            'amount'          => $p->amount,
-            'dueDate'         => $p->due_date?->toDateString(),
-            'paidDate'        => $p->paid_date?->toDateString(),
-            'periodStart'     => $p->period_start?->toDateString(),
-            'periodEnd'       => $p->period_end?->toDateString(),
-            'paymentMethod'   => $p->payment_method,
-            'status'          => $p->status,
-            'referenceNumber' => $p->reference_number,
-            'notes'           => $p->notes,
-            'createdAt'       => $p->created_at?->toISOString(),
+            'id'                => $i->id,
+            'installmentNumber' => (int) $i->installment_number,
+            'dueDate'           => $i->due_date?->toDateString(),
+            'amount'            => (float) $i->amount,
+            'paidAmount'        => $i->paid_amount !== null ? (float) $i->paid_amount : null,
+            'paidDate'          => $i->paid_date?->toDateString(),
+            'paymentMethod'     => $i->payment_method,
+            'referenceNumber'   => $i->reference_number,
+            'status'            => $i->status,
+            'notes'             => $i->notes,
         ];
     }
 }
