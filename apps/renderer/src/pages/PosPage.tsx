@@ -512,10 +512,10 @@ export function PosPage(): JSX.Element {
 
   return (
     <Box display="flex" flexDirection="column" height="100%">
-      <Box display="flex" flex={1} overflow="hidden" gap={2} p={2}>
-        <Card variant="outlined" sx={{ flex: 2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box p={2} pb={1}>
-            <Stack direction="row" spacing={1.5}>
+      <Box display="flex" flex={1} overflow="hidden" gap={1.5} p={1.5}>
+        <Card variant="outlined" sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box px={1.5} pt={1.5} pb={1}>
+            <Stack direction="row" spacing={1}>
               <SearchInput
                 fullWidth
                 placeholder="Search or scan barcode…"
@@ -523,17 +523,17 @@ export function PosPage(): JSX.Element {
                 onChange={setSearch}
                 autoFocus
               />
-              <SecondaryButton onClick={() => setHeldOpen(true)}>Held Sales</SecondaryButton>
-              <SecondaryButton onClick={() => setRecentOpen(true)}>Recent Sales</SecondaryButton>
+              <SecondaryButton size="small" onClick={() => setHeldOpen(true)}>Held</SecondaryButton>
+              <SecondaryButton size="small" onClick={() => setRecentOpen(true)}>Recent</SecondaryButton>
             </Stack>
           </Box>
-          <Box flex={1} overflow="auto" px={2} pb={2}>
-            <Grid container spacing={1.5}>
+          <Box flex={1} overflow="auto" px={1.5} pb={1.5}>
+            <Grid container spacing={1}>
               {productsQuery.data?.map((product) => {
                 const qty = Number(product.quantityOnHand);
                 const tier = stockTier(qty);
                 return (
-                  <Grid item xs={4} sm={3} key={product.id}>
+                  <Grid item xs={3} sm={2} key={product.id}>
                     <Card
                       variant="outlined"
                       sx={{
@@ -542,17 +542,18 @@ export function PosPage(): JSX.Element {
                       }}
                     >
                       <CardActionArea onClick={() => addToCart(product)}>
-                        <CardContent sx={{ p: 1.5 }}>
-                          <Typography variant="subtitle2" noWrap title={product.name}>
+                        <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                          <Typography variant="body2" fontWeight={600} noWrap title={product.name} fontSize="0.78rem">
                             {product.name}
                           </Typography>
-                          <Typography variant="h6" sx={{ mb: 0.5 }}>
+                          <Typography variant="subtitle2" fontWeight={700} sx={{ my: 0.25 }}>
                             {cur}{Number(product.salePrice).toFixed(2)}
                           </Typography>
                           <Chip
                             size="small"
                             label={tier === 'out' ? STOCK_TIER_LABEL.out : `${STOCK_TIER_LABEL[tier]}: ${qty}`}
                             color={STOCK_TIER_COLOR[tier]}
+                            sx={{ height: 18, fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                           />
                         </CardContent>
                       </CardActionArea>
@@ -569,8 +570,8 @@ export function PosPage(): JSX.Element {
           </Box>
         </Card>
 
-        <Card variant="outlined" sx={{ flex: 1, p: 2, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Typography variant="h6" gutterBottom>
+        <Card variant="outlined" sx={{ width: 300, flexShrink: 0, px: 1.5, py: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Typography variant="subtitle2" fontWeight={700} fontSize="0.82rem" gutterBottom>
             Cart
           </Typography>
           {/* When hospital module is enabled, show patient selector only.
@@ -625,9 +626,9 @@ export function PosPage(): JSX.Element {
                     '&:hover': { bgcolor: 'action.selected' },
                   }}
                 >
-                  <Box flex={1}>
-                    <Typography variant="body2">{line.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">
+                  <Box flex={1} minWidth={0}>
+                    <Typography variant="body2" noWrap fontSize="0.75rem">{line.name}</Typography>
+                    <Typography variant="caption" color="text.secondary" fontSize="0.68rem">
                       {cur}{Number(line.unitPrice).toFixed(2)} each
                     </Typography>
                   </Box>
@@ -643,7 +644,7 @@ export function PosPage(): JSX.Element {
                     label="Disc."
                     value={line.discountValue}
                     onChange={(e) => updateLineDiscount(line.productId, e.target.value)}
-                    sx={{ width: 70 }}
+                    sx={{ width: 54, '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5 } }}
                   />
                   <IconButton size="small" onClick={() => removeLine(line.productId)}>
                     <DeleteOutlineIcon fontSize="small" />
@@ -746,42 +747,31 @@ export function PosPage(): JSX.Element {
               </MenuItem>
             ))}
           </TextField>
-          <Stack spacing={0.5} mb={1}>
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="body2">Subtotal</Typography>
-              <Typography variant="body2">{cur}{money(totals.subtotal)}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="body2">Discount</Typography>
-              <Typography variant="body2">-{cur}{money(totals.discountTotal)}</Typography>
-            </Box>
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="body2">Tax</Typography>
-              <Typography variant="body2">{cur}{money(totals.taxTotal)}</Typography>
-            </Box>
-            {couponDiscount > 0 && (
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="body2">Coupon discount</Typography>
-                <Typography variant="body2">-{cur}{money(couponDiscount)}</Typography>
+          <Stack spacing={0.25} mb={1}>
+            {[
+              { label: 'Subtotal', value: `${cur}${money(totals.subtotal)}` },
+              { label: 'Discount', value: `-${cur}${money(totals.discountTotal)}` },
+              { label: 'Tax',      value: `${cur}${money(totals.taxTotal)}` },
+              ...(couponDiscount > 0  ? [{ label: 'Coupon',  value: `-${cur}${money(couponDiscount)}` }]  : []),
+              ...(loyaltyDiscount > 0 ? [{ label: 'Loyalty', value: `-${cur}${money(loyaltyDiscount)}` }] : []),
+            ].map(({ label, value }) => (
+              <Box key={label} display="flex" justifyContent="space-between">
+                <Typography variant="caption" color="text.secondary">{label}</Typography>
+                <Typography variant="caption">{value}</Typography>
               </Box>
-            )}
-            {loyaltyDiscount > 0 && (
-              <Box display="flex" justifyContent="space-between">
-                <Typography variant="body2">Loyalty discount</Typography>
-                <Typography variant="body2">-{cur}{money(loyaltyDiscount)}</Typography>
-              </Box>
-            )}
-            <Box display="flex" justifyContent="space-between">
-              <Typography variant="h6">Grand Total</Typography>
-              <Typography variant="h6">{cur}{money(totals.grandTotal)}</Typography>
+            ))}
+            <Divider sx={{ my: 0.5 }} />
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="body2" fontWeight={700}>Grand Total</Typography>
+              <Typography variant="subtitle1" fontWeight={700}>{cur}{money(totals.grandTotal)}</Typography>
             </Box>
           </Stack>
           <Stack direction="row" spacing={1}>
-            <SecondaryButton disabled={cart.length === 0 || holdMutation.isPending} onClick={() => holdMutation.mutate()}>
+            <SecondaryButton size="small" disabled={cart.length === 0 || holdMutation.isPending} onClick={() => holdMutation.mutate()}>
               Hold
             </SecondaryButton>
-            <PrimaryButton fullWidth size="large" disabled={cart.length === 0} onClick={() => setPaymentOpen(true)}>
-              Payment (F5)
+            <PrimaryButton fullWidth disabled={cart.length === 0} onClick={() => setPaymentOpen(true)}>
+              Pay (F5)
             </PrimaryButton>
           </Stack>
         </Card>

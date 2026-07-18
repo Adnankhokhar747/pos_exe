@@ -25,16 +25,16 @@ export function createAppTheme(mode: 'light' | 'dark') {
     shape: { borderRadius: 8 },
     spacing: 8,
     typography: {
-      fontSize: 13,
-      h4: { fontSize: '1.6rem', fontWeight: 700 },
-      h5: { fontSize: '1.25rem', fontWeight: 700 },
-      h6: { fontSize: '1.05rem', fontWeight: 600 },
-      subtitle1: { fontSize: '0.95rem', fontWeight: 600 },
-      subtitle2: { fontSize: '0.85rem', fontWeight: 600 },
-      body1: { fontSize: '0.875rem' },
-      body2: { fontSize: '0.8125rem' },
-      caption: { fontSize: '0.7rem' },
-      button: { fontWeight: 600, textTransform: 'none' },
+      fontSize: 12,
+      h4: { fontSize: '1.35rem', fontWeight: 700 },
+      h5: { fontSize: '1.1rem',  fontWeight: 700 },
+      h6: { fontSize: '0.95rem', fontWeight: 600 },
+      subtitle1: { fontSize: '0.85rem', fontWeight: 600 },
+      subtitle2: { fontSize: '0.78rem', fontWeight: 600 },
+      body1: { fontSize: '0.8rem' },
+      body2: { fontSize: '0.75rem' },
+      caption: { fontSize: '0.68rem' },
+      button: { fontWeight: 600, textTransform: 'none', fontSize: '0.78rem' },
     },
     components: {
       MuiTextField: {
@@ -49,10 +49,21 @@ export function createAppTheme(mode: 'light' | 'dark') {
       MuiAutocomplete: {
         defaultProps: { size: 'small' },
       },
+      MuiInputBase: {
+        styleOverrides: {
+          input: { fontSize: '0.78rem' },
+        },
+      },
+      MuiInputLabel: {
+        styleOverrides: {
+          root: { fontSize: '0.78rem' },
+        },
+      },
       MuiButton: {
         defaultProps: { size: 'small', disableElevation: true },
         styleOverrides: {
-          root: { textTransform: 'none', fontWeight: 600, borderRadius: 6 },
+          root: { textTransform: 'none', fontWeight: 600, borderRadius: 6, fontSize: '0.78rem' },
+          sizeSmall: { padding: '3px 10px' },
         },
       },
       MuiIconButton: {
@@ -60,29 +71,33 @@ export function createAppTheme(mode: 'light' | 'dark') {
       },
       MuiChip: {
         defaultProps: { size: 'small' },
+        styleOverrides: {
+          root: { fontSize: '0.68rem' },
+          labelSmall: { paddingLeft: 6, paddingRight: 6 },
+        },
       },
       MuiTable: {
         defaultProps: { size: 'small' },
       },
       MuiTableCell: {
         styleOverrides: {
-          root: { padding: '7px 12px', fontSize: '0.8125rem' },
-          head: { fontWeight: 700, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 0.3 },
+          root: { padding: '5px 10px', fontSize: '0.75rem' },
+          head: { fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: 0.3 },
         },
       },
       MuiDialogTitle: {
         styleOverrides: {
-          root: { padding: '12px 20px', fontSize: '1rem', fontWeight: 700 },
+          root: { padding: '10px 16px', fontSize: '0.9rem', fontWeight: 700 },
         },
       },
       MuiDialogContent: {
         styleOverrides: {
-          root: { padding: '16px 20px' },
+          root: { padding: '12px 16px' },
         },
       },
       MuiDialogActions: {
         styleOverrides: {
-          root: { padding: '10px 20px' },
+          root: { padding: '8px 16px' },
         },
       },
       MuiCard: {

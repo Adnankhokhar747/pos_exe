@@ -701,3 +701,57 @@ export interface BackupStatus {
   snapshotCount: number;
   latestSnapshot: BackupSnapshotMeta | null;
 }
+
+// ─── Lease Module ─────────────────────────────────────────────────────────────
+
+export interface LeaseProperty {
+  id: string;
+  name: string;
+  type: 'residential' | 'commercial' | 'equipment' | 'other';
+  address: string | null;
+  description: string | null;
+  baseRent: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface LeaseAgreement {
+  id: string;
+  propertyId: string;
+  customerId: string;
+  property: { id: string; name: string; type: string; address: string | null } | null;
+  customer: { id: string; name: string; phone: string | null } | null;
+  startDate: string;
+  endDate: string;
+  rentAmount: string;
+  rentFrequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  depositAmount: string;
+  status: 'pending' | 'active' | 'expired' | 'terminated';
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface LeasePayment {
+  id: string;
+  leaseId: string;
+  amount: string;
+  dueDate: string | null;
+  paidDate: string | null;
+  periodStart: string;
+  periodEnd: string;
+  paymentMethod: string | null;
+  status: 'pending' | 'paid' | 'overdue' | 'waived';
+  referenceNumber: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface LeaseSummary {
+  activeLeases: number;
+  pendingLeases: number;
+  terminatedLeases: number;
+  expiringSoon: number;
+  totalCollected: string;
+  overduePayments: number;
+  monthlyRevenue: string;
+}

@@ -51,15 +51,27 @@ class ModuleCatalogController extends Controller
         $grants   = TenantModule::where('tenant_id', $companyId)->get()->keyBy('module_id');
 
         return $catalogs->map(function ($cat) use ($grants) {
-            $grant = $grants->get($cat->id);
+            $grant      = $grants->get($cat->id);
+            $enabled    = $grant ? (bool) $grant->enabled : false;
+            $expiryDate = $grant?->expiry_date ? Carbon::parse($grant->expiry_date) : null;
+            $now        = Carbon::now();
+
+            $daysUntilExpiry = $expiryDate ? max(0, (int) $now->diffInDays($expiryDate, false)) : null;
+            $graceDays       = $grant?->grace_period_days ?? 7;
+            $pastGrace       = $expiryDate && $now->gt($expiryDate->copy()->addDays($graceDays));
+            $inGracePeriod   = $expiryDate && $now->gt($expiryDate) && !$pastGrace;
+            $blocked         = !$enabled || $pastGrace;
+
             return [
+                'moduleId'       => $cat->id,
                 'moduleCode'     => $cat->code,
-                'moduleName'     => $cat->name,
+                'name'           => $cat->name,
                 'description'    => $cat->description,
-                'enabled'        => $grant ? $grant->enabled : false,
-                'startDate'      => $grant?->start_date,
-                'expiryDate'     => $grant?->expiry_date,
-                'gracePeriodDays'=> $grant?->grace_period_days ?? 7,
+                'enabled'        => $enabled,
+                'blocked'        => $blocked,
+                'daysUntilExpiry'=> $daysUntilExpiry,
+                'inGracePeriod'  => $inGracePeriod,
+                'expiryDate'     => $expiryDate?->toDateString(),
                 'limits'         => $grant?->limits,
             ];
         });

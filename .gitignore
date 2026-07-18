@@ -9,6 +9,7 @@ build/
 Thumbs.db
 out/
 release/
+release-php/
 .pgdata/
 *.tsbuildinfo
 coverage/

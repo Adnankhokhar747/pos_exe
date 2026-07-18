@@ -11,6 +11,7 @@ import { AppModal } from '../components/AppModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { PrimaryButton, SecondaryButton } from '../components/buttons';
 import { useAuth } from '../state/auth-context';
+import { useModules } from '../state/modules-context';
 
 const EMPTY_FORM = {
   name: '',
@@ -30,6 +31,7 @@ type ScheduleSlotRow = { dayOfWeek: DayOfWeek; startTime: string; endTime: strin
 export function DoctorsPage(): JSX.Element {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isModuleEnabled } = useModules();
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   const bookingBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '';
@@ -164,7 +166,7 @@ export function DoctorsPage(): JSX.Element {
         <PrimaryButton onClick={() => setCreateOpen(true)}>Add Doctor</PrimaryButton>
       </Stack>
 
-      {bookingUrl && (
+      {bookingUrl && isModuleEnabled('booking') && (
         <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: 'primary.light', bgcolor: 'primary.50', borderRadius: 2 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
             <Box>
