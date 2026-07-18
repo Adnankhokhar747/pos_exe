@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Booking;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\ChecksBookingModule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -12,6 +13,7 @@ use Carbon\Carbon;
 
 class BookingAppointmentController extends Controller
 {
+    use ChecksBookingModule;
     public function myAppointments(Request $request)
     {
         /** @var \App\Models\PatientAccount $account */
@@ -55,6 +57,9 @@ class BookingAppointmentController extends Controller
         ]);
 
         $tenantId       = $account->tenant_id;
+
+        if ($err = $this->bookingModuleCheck($tenantId)) return $err;
+
         $patientId      = $account->patient_id;
         $doctorId       = $request->doctorId;
         $appointmentDate= Carbon::parse($request->appointmentDate)->toDateString();

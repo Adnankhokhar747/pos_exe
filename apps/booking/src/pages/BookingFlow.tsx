@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, type BookingDoctor, type DayAvailability, type BookingAccount } from '../api';
+import { api, ApiError, type BookingDoctor, type DayAvailability, type BookingAccount } from '../api';
 import { CalendarPicker } from '../components/CalendarPicker';
 import { AuthModal } from '../components/AuthModal';
 
@@ -20,6 +20,7 @@ export function BookingFlow() {
   const [doctors, setDoctors] = useState<BookingDoctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [bookingDisabled, setBookingDisabled] = useState(false);
 
   const [selectedDoctor, setSelectedDoctor] = useState<BookingDoctor | null>(null);
   const [availability, setAvailability] = useState<DayAvailability[]>([]);
@@ -43,7 +44,13 @@ export function BookingFlow() {
     if (!tenantId) { setLoadingDoctors(false); return; }
     api.doctors(tenantId)
       .then(setDoctors)
-      .catch((e) => setErrorMsg(e.message))
+      .catch((e: unknown) => {
+        if (e instanceof ApiError && e.status === 403) {
+          setBookingDisabled(true);
+        } else {
+          setErrorMsg(e instanceof Error ? e.message : 'Failed to load doctors.');
+        }
+      })
       .finally(() => setLoadingDoctors(false));
   }, [tenantId]);
 
@@ -107,6 +114,20 @@ export function BookingFlow() {
         </div>
         <p style={{ color: '#a0aec0', fontSize: '0.78rem', marginTop: 16 }}>
           Contact your clinic reception to get your personal booking link.
+        </p>
+      </div>
+    );
+  }
+
+  if (bookingDisabled) {
+    return (
+      <div className="page" style={{ textAlign: 'center', paddingTop: 40 }}>
+        <div style={{ fontSize: '3rem', marginBottom: 16 }}>🔒</div>
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8, color: '#2d3748' }}>
+          Online Booking Not Available
+        </h2>
+        <p style={{ color: '#718096', fontSize: '0.9rem', maxWidth: 360, margin: '0 auto 20px' }}>
+          This clinic has not enabled online appointment booking. Please contact the clinic directly to schedule an appointment.
         </p>
       </div>
     );

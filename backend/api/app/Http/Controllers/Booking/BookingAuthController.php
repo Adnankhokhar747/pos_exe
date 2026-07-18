@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Booking;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\ChecksBookingModule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +13,7 @@ use App\Models\PatientAccount;
 
 class BookingAuthController extends Controller
 {
+    use ChecksBookingModule;
     public function register(Request $request)
     {
         $request->validate([
@@ -23,6 +25,8 @@ class BookingAuthController extends Controller
         ]);
 
         $tenantId = $request->tenantId;
+
+        if ($err = $this->bookingModuleCheck($tenantId)) return $err;
 
         // Check uniqueness per tenant+email
         $exists = PatientAccount::where('tenant_id', $tenantId)
@@ -79,6 +83,8 @@ class BookingAuthController extends Controller
             'email'    => 'required|email',
             'password' => 'required|string',
         ]);
+
+        if ($err = $this->bookingModuleCheck($request->tenantId)) return $err;
 
         $account = PatientAccount::where('tenant_id', $request->tenantId)
             ->where('email', $request->email)

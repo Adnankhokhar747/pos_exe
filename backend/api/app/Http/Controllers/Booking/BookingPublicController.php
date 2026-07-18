@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Booking;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\ChecksBookingModule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Doctor;
@@ -12,6 +13,7 @@ use Carbon\Carbon;
 
 class BookingPublicController extends Controller
 {
+    use ChecksBookingModule;
     public function defaultTenant()
     {
         $tenant = Tenant::whereIn('status', ['active', 'trial', 'grace_period'])
@@ -31,6 +33,8 @@ class BookingPublicController extends Controller
         $request->validate([
             'tenantId' => 'required|string',
         ]);
+
+        if ($err = $this->bookingModuleCheck($request->tenantId)) return $err;
 
         $doctors = Doctor::where('tenant_id', $request->tenantId)
             ->where('is_active', true)
@@ -64,6 +68,8 @@ class BookingPublicController extends Controller
         ]);
 
         $tenantId = $request->tenantId;
+
+        if ($err = $this->bookingModuleCheck($tenantId)) return $err;
         $from     = Carbon::parse($request->input('from', Carbon::today()->toDateString()))->startOfDay();
         $to       = Carbon::parse($request->input('to', Carbon::today()->addDays(30)->toDateString()))->startOfDay();
 
