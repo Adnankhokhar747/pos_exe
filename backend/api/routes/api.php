@@ -69,7 +69,8 @@ Route::prefix('v1/booking')->group(function () {
 Route::prefix('v1/auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::middleware('jwt.auth')->group(function () {
-        Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/me',      [AuthController::class, 'me']);
+        Route::patch('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/refresh', [AuthController::class, 'refresh']);
         Route::post('/logout', [AuthController::class, 'logout']);
     });

@@ -9,6 +9,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (token: string, user: AuthenticatedUser) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -55,6 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       logout: () => {
         setAccessToken(null);
         setUser(null);
+      },
+      refreshUser: async () => {
+        const me = await apiFetch<AuthenticatedUser>('/api/v1/auth/me');
+        setUser(me);
+        saveUserCache(me);
       },
     }),
     [user, isLoading],

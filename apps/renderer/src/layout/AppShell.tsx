@@ -41,7 +41,8 @@ import WifiOffIcon from '@mui/icons-material/WifiOff';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import LogoutIcon from '@mui/icons-material/Logout';
+import LogoutIcon        from '@mui/icons-material/Logout';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth-context';
 import { useLicense } from '../state/license-context';
@@ -428,6 +429,14 @@ export function AppShell({ children }: { children: ReactNode }): JSX.Element {
                   <Typography variant="caption" color="text.secondary" noWrap display="block">{user?.branchName}</Typography>
                 </Box>
                 <Divider />
+                <MenuItem
+                  dense
+                  onClick={() => { setProfileAnchor(null); navigate('/profile'); }}
+                  sx={{ gap: 1, fontSize: '0.82rem' }}
+                >
+                  <ManageAccountsIcon fontSize="small" />
+                  My Profile
+                </MenuItem>
                 <MenuItem
                   dense
                   onClick={() => { setProfileAnchor(null); logout(); }}

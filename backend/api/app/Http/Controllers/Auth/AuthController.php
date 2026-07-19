@@ -80,6 +80,44 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out.']);
     }
 
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'fullName'    => 'nullable|string|max:255',
+            'currentPassword' => 'nullable|string',
+            'newPassword'     => 'nullable|string|min:6',
+        ]);
+
+        $user = $request->user();
+
+        if ($request->filled('newPassword')) {
+            if (!$request->filled('currentPassword') || !Hash::check($request->currentPassword, $user->password_hash)) {
+                return response()->json(['message' => 'Current password is incorrect.'], 422);
+            }
+            $user->password_hash = Hash::make($request->newPassword);
+        }
+
+        if ($request->filled('fullName')) {
+            $user->full_name = $request->fullName;
+        }
+
+        $user->save();
+
+        $permissions = $user->getPermissions();
+        [$branchId, $branchName, $warehouseId] = $this->resolveBranchWarehouse($user->tenant_id);
+
+        return response()->json([
+            'id'          => $user->id,
+            'tenantId'    => $user->tenant_id,
+            'username'    => $user->username,
+            'fullName'    => $user->full_name,
+            'permissions' => $permissions,
+            'branchId'    => $branchId,
+            'branchName'  => $branchName,
+            'warehouseId' => $warehouseId,
+        ]);
+    }
+
     private function resolveBranchWarehouse(string $tenantId): array
     {
         $branch = DB::table('branches')
