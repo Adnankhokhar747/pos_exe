@@ -431,6 +431,14 @@ export interface EInvoiceSettings {
   countryCode: string;
   vatRate: string;
   phase: number;
+  // Phase 2 onboarding status (read-only, never exposes keys/secrets)
+  onboardingStatus?: 'none' | 'key_generated' | 'compliance_pending' | 'compliance_done' | 'production_live';
+  hasCsr?: boolean;
+  hasCertificate?: boolean;
+  hasCcsid?: boolean;
+  hasPcsid?: boolean;
+  invoiceCounter?: number;
+  zatcaEnv?: 'sandbox' | 'production';
 }
 
 export interface InvoiceLine {

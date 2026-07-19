@@ -17,25 +17,42 @@ class EInvoiceSettingsController extends Controller
 
         if (!$settings) {
             return response()->json([
-                'id'             => null,
-                'tenantId'       => $tenantId,
-                'isActive'       => false,
-                'sellerNameAr'   => null,
-                'sellerNameEn'   => null,
-                'vatNumber'      => null,
-                'crNumber'       => null,
-                'buildingNumber' => null,
-                'streetName'     => null,
-                'district'       => null,
-                'city'           => null,
-                'postalCode'     => null,
-                'countryCode'    => 'SA',
-                'vatRate'        => '15.00',
-                'phase'          => 1,
+                'id'               => null,
+                'tenantId'         => $tenantId,
+                'isActive'         => false,
+                'sellerNameAr'     => null,
+                'sellerNameEn'     => null,
+                'vatNumber'        => null,
+                'crNumber'         => null,
+                'buildingNumber'   => null,
+                'streetName'       => null,
+                'district'         => null,
+                'city'             => null,
+                'postalCode'       => null,
+                'countryCode'      => 'SA',
+                'vatRate'          => '15.00',
+                'phase'            => 1,
+                'onboardingStatus' => 'none',
+                'hasCsr'           => false,
+                'hasCertificate'   => false,
+                'hasCcsid'         => false,
+                'hasPcsid'         => false,
+                'invoiceCounter'   => 0,
+                'zatcaEnv'         => 'sandbox',
             ]);
         }
 
-        return $settings;
+        // Merge Phase 2 status fields (never expose private_key, secrets)
+        $data                    = $settings->toArray();
+        $data['onboardingStatus'] = $settings->onboarding_status ?? 'none';
+        $data['hasCsr']           = !empty($settings->csr);
+        $data['hasCertificate']   = !empty($settings->certificate);
+        $data['hasCcsid']         = !empty($settings->ccsid_token);
+        $data['hasPcsid']         = !empty($settings->pcsid_token);
+        $data['invoiceCounter']   = $settings->invoice_counter ?? 0;
+        $data['zatcaEnv']         = $settings->zatca_env ?? 'sandbox';
+
+        return response()->json($data);
     }
 
     public function update(Request $request)
@@ -45,6 +62,7 @@ class EInvoiceSettingsController extends Controller
             'vatRate'    => 'nullable|numeric|min:0|max:100',
             'phase'      => 'nullable|integer|in:1,2',
             'countryCode'=> 'nullable|string|max:2',
+            'zatcaEnv'   => 'nullable|string|in:sandbox,production',
         ]);
 
         $tenantId = $request->user()->tenant_id;
@@ -63,6 +81,7 @@ class EInvoiceSettingsController extends Controller
             'country_code'   => $request->countryCode,
             'vat_rate'       => $request->vatRate,
             'phase'          => $request->phase,
+            'zatca_env'      => $request->zatcaEnv,
         ], fn($v) => $v !== null);
 
         $settings = EInvoiceSettings::firstOrCreate(

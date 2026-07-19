@@ -47,6 +47,7 @@ use App\Http\Controllers\Lease\LeasePropertiesController;
 use App\Http\Controllers\Lease\LeaseAgreementsController;
 use App\Http\Controllers\Lease\LeaseReportsController;
 use App\Http\Controllers\EInvoice\EInvoiceSettingsController;
+use App\Http\Controllers\EInvoice\EInvoiceCertController;
 
 // ─── Online Patient Booking (public, no staff auth) ───────────────────────────
 Route::prefix('v1/booking')->group(function () {
@@ -416,6 +417,15 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
     Route::prefix('einvoice')->middleware('module:einvoice')->group(function () {
         Route::get('/settings',   [EInvoiceSettingsController::class, 'show']);
         Route::patch('/settings', [EInvoiceSettingsController::class, 'update']);
+
+        // Phase 2 onboarding
+        Route::prefix('onboarding')->group(function () {
+            Route::get ('/',              [EInvoiceCertController::class, 'status']);
+            Route::post('/generate-key',  [EInvoiceCertController::class, 'generateKey']);
+            Route::post('/submit-otp',    [EInvoiceCertController::class, 'submitOtp']);
+            Route::post('/compliance',    [EInvoiceCertController::class, 'runCompliance']);
+            Route::post('/activate',      [EInvoiceCertController::class, 'activateProduction']);
+        });
     });
 
     // ─── Cloud Backup (tenant-facing) ─────────────────────────────────────────
