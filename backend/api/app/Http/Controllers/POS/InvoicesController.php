@@ -175,6 +175,40 @@ class InvoicesController extends Controller
                 }
             }
 
+            // Generate ZATCA Phase 1 QR code if e-invoice module is enabled
+            $einvoiceEnabled = DB::table('tenant_modules')
+                ->join('module_catalog', 'tenant_modules.module_id', '=', 'module_catalog.id')
+                ->where('tenant_modules.tenant_id', $tenantId)
+                ->where('module_catalog.code', 'einvoice')
+                ->where('tenant_modules.enabled', true)
+                ->exists();
+
+            if ($einvoiceEnabled && $invoice->status === 'completed') {
+                $settings = \App\Models\EInvoiceSettings::where('tenant_id', $tenantId)->first();
+                if ($settings && $settings->is_active) {
+                    $service    = app(\App\Services\EInvoiceService::class);
+                    $vatRate    = (float)($settings->vat_rate ?? 15);
+                    $taxTotal   = (float)$invoice->tax_total;
+                    $grandTotal = (float)$invoice->grand_total;
+                    $vatAmount  = $taxTotal > 0
+                        ? $taxTotal
+                        : $service->extractVat($grandTotal, $vatRate);
+
+                    $qr = $service->generateTlvQr(
+                        $settings->seller_name_en ?? $settings->seller_name_ar ?? '',
+                        $settings->vat_number    ?? '',
+                        now()->toIso8601String(),
+                        number_format($grandTotal, 2, '.', ''),
+                        number_format($vatAmount,  2, '.', '')
+                    );
+
+                    $invoice->update([
+                        'einvoice_qr'   => $qr,
+                        'einvoice_uuid' => (string) \Illuminate\Support\Str::uuid(),
+                    ]);
+                }
+            }
+
             return $invoice->load(['lines.product','payments','customer','patient']);
         });
     }

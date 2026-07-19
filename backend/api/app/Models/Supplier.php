@@ -14,6 +14,7 @@ protected $table = 'suppliers';
 
     protected $fillable = [
         'id','tenant_id','name','phone','email','address','tax_number','current_balance','is_active',
+        'cr_number','building_number','street_name','district','city','postal_code','country_code',
     ];
 
     public function purchaseOrders(): HasMany { return $this->hasMany(PurchaseOrder::class); }

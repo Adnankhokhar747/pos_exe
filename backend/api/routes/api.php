@@ -46,6 +46,7 @@ use App\Http\Controllers\Booking\BookingAppointmentController;
 use App\Http\Controllers\Lease\LeasePropertiesController;
 use App\Http\Controllers\Lease\LeaseAgreementsController;
 use App\Http\Controllers\Lease\LeaseReportsController;
+use App\Http\Controllers\EInvoice\EInvoiceSettingsController;
 
 // ─── Online Patient Booking (public, no staff auth) ───────────────────────────
 Route::prefix('v1/booking')->group(function () {
@@ -409,6 +410,12 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::get('/upcoming', [LeaseReportsController::class, 'upcoming']);
             Route::get('/payments', [LeaseReportsController::class, 'payments']);
         });
+    });
+
+    // ─── E-Invoice Module ────────────────────────────────────────────────────────
+    Route::prefix('einvoice')->middleware('module:einvoice')->group(function () {
+        Route::get('/settings',   [EInvoiceSettingsController::class, 'show']);
+        Route::patch('/settings', [EInvoiceSettingsController::class, 'update']);
     });
 
     // ─── Cloud Backup (tenant-facing) ─────────────────────────────────────────

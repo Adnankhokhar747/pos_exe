@@ -7,12 +7,15 @@ export interface ReceiptTemplateOptions {
   headerText?: string | null;
   footerText?: string | null;
   paperWidthMm: number;
+  einvoiceQrDataUrl?: string;  // PNG data URL from QRCode.toDataURL()
+  einvoiceVatNumber?: string;
 }
 
-export function renderReceiptHtml({ invoice, branchName, headerText, footerText, paperWidthMm }: ReceiptTemplateOptions): string {
+export function renderReceiptHtml({ invoice, branchName, headerText, footerText, paperWidthMm, einvoiceQrDataUrl, einvoiceVatNumber }: ReceiptTemplateOptions): string {
   const isNarrow = paperWidthMm <= 58;
   const baseFontSize = isNarrow ? '11px' : '12px';
   const titleFontSize = isNarrow ? '13px' : '15px';
+  const qrSize = isNarrow ? '80px' : '110px';
   const lines = invoice.lines ?? [];
   const payments = invoice.payments ?? [];
 
@@ -89,6 +92,8 @@ export function renderReceiptHtml({ invoice, branchName, headerText, footerText,
   }
   <hr />
   ${footerText ? `<div class="center">${escapeHtml(footerText)}</div>` : '<div class="center">Thank you for your purchase!</div>'}
+  ${einvoiceVatNumber ? `<div class="center" style="margin-top:3px;font-size:10px;">VAT Reg: ${escapeHtml(einvoiceVatNumber)}</div>` : ''}
+  ${einvoiceQrDataUrl ? `<hr /><div class="center" style="margin-top:4px;"><img src="${einvoiceQrDataUrl}" width="${qrSize}" height="${qrSize}" style="display:block;margin:0 auto;" /><div style="font-size:9px;margin-top:2px;color:#555;">Scan for e-invoice (ZATCA)</div></div>` : ''}
 </body>
 </html>
 `;

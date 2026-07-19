@@ -18,7 +18,7 @@ protected $table = 'invoices';
         'subtotal','discount_total','tax_total','grand_total','cashier_id','held_label',
         'original_invoice_id','void_reason','voided_by','voided_at','currency_code',
         'exchange_rate_to_base','loyalty_points_earned','loyalty_points_redeemed',
-        'coupon_code','coupon_discount_amount',
+        'coupon_code','coupon_discount_amount','einvoice_qr','einvoice_uuid',
     ];
 
     protected $casts = ['voided_at' => 'datetime'];

@@ -123,6 +123,13 @@ export interface Customer {
   loyaltyPoints: string;
   isActive: boolean;
   isWalkIn: boolean;
+  crNumber?: string | null;
+  buildingNumber?: string | null;
+  streetName?: string | null;
+  district?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  countryCode?: string | null;
 }
 
 export interface LoyaltyTransaction {
@@ -152,6 +159,13 @@ export interface Supplier {
   taxNumber: string | null;
   currentBalance: string;
   isActive: boolean;
+  crNumber?: string | null;
+  buildingNumber?: string | null;
+  streetName?: string | null;
+  district?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  countryCode?: string | null;
 }
 
 export interface SupplierLedgerEntry {
@@ -395,8 +409,28 @@ export interface Invoice {
   couponCode: string | null;
   couponDiscountAmount: string;
   createdAt: string;
+  einvoiceQr?: string | null;
+  einvoiceUuid?: string | null;
   lines?: InvoiceLine[];
   payments?: Payment[];
+}
+
+export interface EInvoiceSettings {
+  id: string | null;
+  tenantId: string;
+  isActive: boolean;
+  sellerNameAr: string | null;
+  sellerNameEn: string | null;
+  vatNumber: string | null;
+  crNumber: string | null;
+  buildingNumber: string | null;
+  streetName: string | null;
+  district: string | null;
+  city: string | null;
+  postalCode: string | null;
+  countryCode: string;
+  vatRate: string;
+  phase: number;
 }
 
 export interface InvoiceLine {

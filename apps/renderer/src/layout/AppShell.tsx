@@ -38,6 +38,7 @@ import HomeWorkIcon from '@mui/icons-material/HomeWork';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -130,6 +131,14 @@ const NAV_GROUPS: NavGroup[] = [
       { path: '/lease/dashboard',   label: 'Dashboard',   icon: <DashboardIcon fontSize="small" />,   requiredModule: 'lease' },
       { path: '/lease/agreements',  label: 'Agreements',  icon: <HandshakeIcon fontSize="small" />,  requiredModule: 'lease', requiredPermission: 'lease.agreement.manage' },
       { path: '/lease/reports',     label: 'Reports',     icon: <PaymentsIcon fontSize="small" />,   requiredModule: 'lease', requiredPermission: 'lease.report.view' },
+    ],
+  },
+  {
+    label: 'E-Invoice',
+    collapsible: true,
+    groupIcon: <ReceiptLongIcon fontSize="small" />,
+    items: [
+      { path: '/einvoice/settings', label: 'ZATCA Settings', icon: <ReceiptLongIcon fontSize="small" />, requiredModule: 'einvoice' },
     ],
   },
   {

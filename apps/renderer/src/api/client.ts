@@ -32,8 +32,14 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   });
 
   if (!response.ok) {
-    const problem = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new ApiError(response.status, problem.detail ?? problem.message ?? 'Request failed.', problem.title ?? '');
+    const problem = await response.json().catch(() => ({ message: response.statusText }));
+    // Laravel 422 validation errors: { message: "...", errors: { field: ["msg"] } }
+    let detail = problem.detail ?? problem.message ?? 'Request failed.';
+    if (response.status === 422 && problem.errors) {
+      const firstField = Object.values(problem.errors as Record<string, string[]>)[0];
+      if (firstField?.[0]) detail = firstField[0];
+    }
+    throw new ApiError(response.status, detail, problem.title ?? '');
   }
 
   if (response.status === 204) return undefined as T;

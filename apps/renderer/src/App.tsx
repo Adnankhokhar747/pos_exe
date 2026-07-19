@@ -22,6 +22,7 @@ import { LeaseDashboardPage } from './pages/LeaseDashboardPage';
 
 import { LeaseAgreementsPage } from './pages/LeaseAgreementsPage';
 import { LeaseReportsPage } from './pages/LeaseReportsPage';
+import { EInvoiceSettingsPage } from './pages/EInvoiceSettingsPage';
 import { AppShell } from './layout/AppShell';
 import { LicenseBlockedScreen } from './layout/LicenseBlockedScreen';
 import { OfflineLicenseExpiredScreen } from './layout/OfflineLicenseExpiredScreen';
@@ -218,6 +219,7 @@ export function App(): JSX.Element {
           </RequireAuth>
         }
       />
+      <Route path="/einvoice/settings" element={<RequireAuth requiredModule="einvoice"><EInvoiceSettingsPage /></RequireAuth>} />
       <Route path="/lease/dashboard" element={<RequireAuth requiredModule="lease"><LeaseDashboardPage /></RequireAuth>} />
 
       <Route path="/lease/agreements" element={<RequireAuth permission="lease.agreement.manage" requiredModule="lease"><LeaseAgreementsPage /></RequireAuth>} />

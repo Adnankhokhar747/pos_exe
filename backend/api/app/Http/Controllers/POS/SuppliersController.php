@@ -30,13 +30,20 @@ class SuppliersController extends Controller
         $request->validate(['name' => 'required|string']);
 
         return Supplier::create([
-            'id'        => (string) \Illuminate\Support\Str::uuid(),
-            'tenant_id' => $request->user()->tenant_id,
-            'name'      => $request->name,
-            'phone'     => $request->phone,
-            'email'     => $request->email,
-            'address'   => $request->address,
-            'tax_number'=> $request->taxNumber,
+            'id'              => (string) \Illuminate\Support\Str::uuid(),
+            'tenant_id'       => $request->user()->tenant_id,
+            'name'            => $request->name,
+            'phone'           => $request->phone,
+            'email'           => $request->email,
+            'address'         => $request->address,
+            'tax_number'      => $request->taxNumber,
+            'cr_number'       => $request->crNumber,
+            'building_number' => $request->buildingNumber,
+            'street_name'     => $request->streetName,
+            'district'        => $request->district,
+            'city'            => $request->city,
+            'postal_code'     => $request->postalCode,
+            'country_code'    => $request->countryCode,
         ]);
     }
 
@@ -51,7 +58,21 @@ class SuppliersController extends Controller
     {
         $supplier = Supplier::where('tenant_id', $request->user()->tenant_id)->find($id);
         if (!$supplier) throw new NotFoundException("Supplier {$id} not found.");
-        $supplier->update(array_filter($request->only(['name','phone','email','address','tax_number','is_active']), fn($v) => $v !== null));
+        $supplier->update(array_filter([
+            'name'            => $request->name,
+            'phone'           => $request->phone,
+            'email'           => $request->email,
+            'address'         => $request->address,
+            'tax_number'      => $request->taxNumber,
+            'is_active'       => $request->isActive,
+            'cr_number'       => $request->crNumber,
+            'building_number' => $request->buildingNumber,
+            'street_name'     => $request->streetName,
+            'district'        => $request->district,
+            'city'            => $request->city,
+            'postal_code'     => $request->postalCode,
+            'country_code'    => $request->countryCode,
+        ], fn($v) => $v !== null));
         return $supplier;
     }
 

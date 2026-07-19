@@ -15,6 +15,7 @@ protected $table = 'customers';
     protected $fillable = [
         'id','tenant_id','name','phone','email','address','tax_number',
         'credit_limit','current_balance','loyalty_points','is_active','is_walk_in',
+        'cr_number','building_number','street_name','district','city','postal_code','country_code',
     ];
 
     public function invoices(): HasMany { return $this->hasMany(Invoice::class); }

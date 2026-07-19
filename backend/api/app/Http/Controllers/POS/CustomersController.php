@@ -34,14 +34,21 @@ class CustomersController extends Controller
         $request->validate(['name' => 'required|string']);
 
         return Customer::create([
-            'id'           => (string) \Illuminate\Support\Str::uuid(),
-            'tenant_id'    => $request->user()->tenant_id,
-            'name'         => $request->name,
-            'phone'        => $request->phone,
-            'email'        => $request->email,
-            'address'      => $request->address,
-            'tax_number'   => $request->taxNumber,
-            'credit_limit' => $request->creditLimit ?? 0,
+            'id'              => (string) \Illuminate\Support\Str::uuid(),
+            'tenant_id'       => $request->user()->tenant_id,
+            'name'            => $request->name,
+            'phone'           => $request->phone,
+            'email'           => $request->email,
+            'address'         => $request->address,
+            'tax_number'      => $request->taxNumber,
+            'credit_limit'    => $request->creditLimit ?? 0,
+            'cr_number'       => $request->crNumber,
+            'building_number' => $request->buildingNumber,
+            'street_name'     => $request->streetName,
+            'district'        => $request->district,
+            'city'            => $request->city,
+            'postal_code'     => $request->postalCode,
+            'country_code'    => $request->countryCode,
         ]);
     }
 
@@ -58,13 +65,20 @@ class CustomersController extends Controller
         if (!$customer) throw new NotFoundException("Customer {$id} not found.");
 
         $customer->update(array_filter([
-            'name'         => $request->name,
-            'phone'        => $request->phone,
-            'email'        => $request->email,
-            'address'      => $request->address,
-            'tax_number'   => $request->taxNumber,
-            'credit_limit' => $request->creditLimit,
-            'is_active'    => $request->isActive,
+            'name'            => $request->name,
+            'phone'           => $request->phone,
+            'email'           => $request->email,
+            'address'         => $request->address,
+            'tax_number'      => $request->taxNumber,
+            'credit_limit'    => $request->creditLimit,
+            'is_active'       => $request->isActive,
+            'cr_number'       => $request->crNumber,
+            'building_number' => $request->buildingNumber,
+            'street_name'     => $request->streetName,
+            'district'        => $request->district,
+            'city'            => $request->city,
+            'postal_code'     => $request->postalCode,
+            'country_code'    => $request->countryCode,
         ], fn($v) => $v !== null));
 
         return $customer;

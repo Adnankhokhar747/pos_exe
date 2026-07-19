@@ -24,7 +24,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch, ApiError } from '../api/client';
-import type { CartLine, Currency, Customer, Invoice, InvoiceLine, Patient, ProductWithStock, ReceiptSettings, TenantSettings } from '../api/types';
+import type { CartLine, Currency, Customer, EInvoiceSettings, Invoice, InvoiceLine, Patient, ProductWithStock, ReceiptSettings, TenantSettings } from '../api/types';
 import { SearchInput } from '../components/SearchInput';
 import { AppModal } from '../components/AppModal';
 import { DataTable } from '../components/DataTable';
@@ -33,6 +33,8 @@ import { PrimaryButton, SecondaryButton, DangerButton, SuccessButton } from '../
 import { formatEnumLabel } from '../utils/format';
 import { renderReceiptHtml } from '../printing/receipt-template';
 import { useAuth } from '../state/auth-context';
+import { useModules } from '../state/modules-context';
+import QRCode from 'qrcode';
 
 // Mirrors CustomersService.LOYALTY_REDEMPTION_VALUE on the backend — 100 points = 1
 // currency unit of discount — so the cashier sees an accurate total before submitting.
@@ -72,6 +74,7 @@ function invoiceStatusColor(status: string): 'default' | 'success' | 'error' | '
 export function PosPage(): JSX.Element {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isModuleEnabled } = useModules();
   const ACTIVE_BRANCH_ID = user!.branchId;
   const ACTIVE_BRANCH_NAME = user!.branchName;
   const ACTIVE_WAREHOUSE_ID = user!.warehouseId;
@@ -173,6 +176,16 @@ export function PosPage(): JSX.Element {
     queryKey: ['tenant-settings'],
     queryFn: () => apiFetch<TenantSettings>('/api/v1/settings/tenant'),
   });
+
+  const einvoiceSettingsQuery = useQuery({
+    queryKey: ['einvoice-settings'],
+    queryFn: () => apiFetch<EInvoiceSettings>('/api/v1/einvoice/settings'),
+    enabled: isModuleEnabled('einvoice'),
+    staleTime: 60_000,
+  });
+
+  const einvoiceActive = isModuleEnabled('einvoice') && (einvoiceSettingsQuery.data?.isActive ?? false);
+  const zatcaVatRate = einvoiceActive ? String(einvoiceSettingsQuery.data?.vatRate ?? '15.00') : null;
 
   useEffect(() => {
     if (tenantSettingsQuery.data && !currencyCode) {
@@ -459,7 +472,7 @@ export function PosPage(): JSX.Element {
           productId: product.id,
           name: product.name,
           unitPrice: product.salePrice,
-          taxRatePct: product.taxRatePct,
+          taxRatePct: zatcaVatRate ?? product.taxRatePct,
           quantity: 1,
           discountValue: '0',
           trackSerials: product.trackSerials,
@@ -492,12 +505,23 @@ export function PosPage(): JSX.Element {
       apiFetch<Invoice>(`/api/v1/invoices/${invoiceId}`),
       apiFetch<ReceiptSettings>('/api/v1/settings/receipt-settings'),
     ]);
+
+    let einvoiceQrDataUrl: string | undefined;
+    if (detail.einvoiceQr) {
+      try {
+        einvoiceQrDataUrl = await QRCode.toDataURL(detail.einvoiceQr, { width: 160, margin: 1 });
+      } catch {
+        // QR generation failure is non-blocking — receipt still prints without QR
+      }
+    }
+
     const html = renderReceiptHtml({
       invoice: detail,
       branchName: ACTIVE_BRANCH_NAME,
       headerText: receiptSettings.headerText,
       footerText: receiptSettings.footerText,
       paperWidthMm: receiptSettings.paperWidthMm,
+      einvoiceQrDataUrl,
     });
     setPrintPreview({ open: true, html, title: `Receipt — ${detail.invoiceNo}` });
   }
@@ -751,7 +775,7 @@ export function PosPage(): JSX.Element {
             {[
               { label: 'Subtotal', value: `${cur}${money(totals.subtotal)}` },
               { label: 'Discount', value: `-${cur}${money(totals.discountTotal)}` },
-              { label: 'Tax',      value: `${cur}${money(totals.taxTotal)}` },
+              { label: einvoiceActive ? `VAT (${Number(zatcaVatRate).toFixed(0)}%)` : 'Tax', value: `${cur}${money(totals.taxTotal)}` },
               ...(couponDiscount > 0  ? [{ label: 'Coupon',  value: `-${cur}${money(couponDiscount)}` }]  : []),
               ...(loyaltyDiscount > 0 ? [{ label: 'Loyalty', value: `-${cur}${money(loyaltyDiscount)}` }] : []),
             ].map(({ label, value }) => (
