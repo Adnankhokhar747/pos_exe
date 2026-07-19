@@ -26,6 +26,11 @@ class PermissionsSeeder extends Seeder
         ['code' => 'hospital.appointment.manage',    'module' => 'hospital', 'description' => 'Create, update, and transition appointments and issue tokens'],
         ['code' => 'hospital.appointment.viewAll',   'module' => 'hospital', 'description' => "View every doctor's appointments and queue"],
         ['code' => 'hospital.report.view',           'module' => 'hospital', 'description' => 'View hospital and doctor reports'],
+        ['code' => 'hr.employee.manage',             'module' => 'hr',       'description' => 'Create and manage employee profiles and shifts'],
+        ['code' => 'hr.attendance.manage',           'module' => 'hr',       'description' => 'Manual correction of attendance records'],
+        ['code' => 'hr.leave.manage',                'module' => 'hr',       'description' => 'Approve or reject employee leave requests'],
+        ['code' => 'hr.payroll.manage',              'module' => 'hr',       'description' => 'Generate and process monthly payroll'],
+        ['code' => 'hr.report.view',                 'module' => 'hr',       'description' => 'View HR attendance and payroll reports'],
     ];
 
     const SYSTEM_ROLE_PERMISSIONS = [
@@ -65,6 +70,13 @@ class PermissionsSeeder extends Seeder
             'hospital.appointment.manage',
             'hospital.appointment.viewAll',
             'hospital.report.view',
+        ],
+        'HR Manager' => [
+            'hr.employee.manage',
+            'hr.attendance.manage',
+            'hr.leave.manage',
+            'hr.payroll.manage',
+            'hr.report.view',
         ],
     ];
 

@@ -49,6 +49,12 @@ use App\Http\Controllers\Lease\LeaseReportsController;
 use App\Http\Controllers\EInvoice\EInvoiceSettingsController;
 use App\Http\Controllers\EInvoice\EInvoiceCertController;
 use App\Http\Controllers\WhatsApp\WhatsAppSettingsController;
+use App\Http\Controllers\Hr\HrEmployeesController;
+use App\Http\Controllers\Hr\HrShiftsController;
+use App\Http\Controllers\Hr\HrAttendanceController;
+use App\Http\Controllers\Hr\HrLeavesController;
+use App\Http\Controllers\Hr\HrPayrollController;
+use App\Http\Controllers\Hr\HrReportsController;
 
 // ─── Online Patient Booking (public, no staff auth) ───────────────────────────
 Route::prefix('v1/booking')->group(function () {
@@ -428,6 +434,54 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::post('/compliance',    [EInvoiceCertController::class, 'runCompliance']);
             Route::post('/activate',      [EInvoiceCertController::class, 'activateProduction']);
         });
+    });
+
+    // ─── HR / Attendance & Payroll Module ────────────────────────────────────────
+    Route::prefix('hr')->middleware('module:hr')->group(function () {
+
+        // Employees
+        Route::get('/employees/linkable-users', [HrEmployeesController::class, 'linkableUsers']);
+        Route::get('/employees',      [HrEmployeesController::class, 'index']);
+        Route::post('/employees',     [HrEmployeesController::class, 'store'])->middleware('permission:hr.employee.manage');
+        Route::get('/employees/{id}', [HrEmployeesController::class, 'show']);
+        Route::patch('/employees/{id}', [HrEmployeesController::class, 'update'])->middleware('permission:hr.employee.manage');
+
+        // Shifts
+        Route::get('/shifts',         [HrShiftsController::class, 'index']);
+        Route::post('/shifts',        [HrShiftsController::class, 'store'])->middleware('permission:hr.employee.manage');
+        Route::patch('/shifts/{id}',  [HrShiftsController::class, 'update'])->middleware('permission:hr.employee.manage');
+
+        // Attendance
+        Route::get('/attendance/my-today', [HrAttendanceController::class, 'myToday']);
+        Route::post('/attendance/clock-in', [HrAttendanceController::class, 'clockIn']);
+        Route::post('/attendance/clock-out', [HrAttendanceController::class, 'clockOut']);
+        Route::get('/attendance',      [HrAttendanceController::class, 'index']);
+        Route::post('/attendance',     [HrAttendanceController::class, 'upsert'])->middleware('permission:hr.attendance.manage');
+
+        // Leave types
+        Route::get('/leave-types',        [HrLeavesController::class, 'listTypes']);
+        Route::post('/leave-types',       [HrLeavesController::class, 'storeType'])->middleware('permission:hr.leave.manage');
+        Route::patch('/leave-types/{id}', [HrLeavesController::class, 'updateType'])->middleware('permission:hr.leave.manage');
+
+        // Leaves
+        Route::get('/leaves',                    [HrLeavesController::class, 'index']);
+        Route::post('/leaves',                   [HrLeavesController::class, 'store']);
+        Route::patch('/leaves/{id}/approve',     [HrLeavesController::class, 'approve'])->middleware('permission:hr.leave.manage');
+        Route::patch('/leaves/{id}/reject',      [HrLeavesController::class, 'reject'])->middleware('permission:hr.leave.manage');
+        Route::get('/leaves/balance/{employeeId}', [HrLeavesController::class, 'balance']);
+
+        // Payroll
+        Route::get('/payroll',             [HrPayrollController::class, 'index'])->middleware('permission:hr.payroll.manage');
+        Route::post('/payroll/generate',   [HrPayrollController::class, 'generate'])->middleware('permission:hr.payroll.manage');
+        Route::get('/payroll/{id}',        [HrPayrollController::class, 'show'])->middleware('permission:hr.payroll.manage');
+        Route::get('/payroll/{id}/payslips', [HrPayrollController::class, 'payslips'])->middleware('permission:hr.payroll.manage');
+        Route::patch('/payroll/{id}/approve',   [HrPayrollController::class, 'approve'])->middleware('permission:hr.payroll.manage');
+        Route::patch('/payroll/{id}/mark-paid', [HrPayrollController::class, 'markPaid'])->middleware('permission:hr.payroll.manage');
+        Route::delete('/payroll/{id}',     [HrPayrollController::class, 'destroy'])->middleware('permission:hr.payroll.manage');
+
+        // Reports
+        Route::get('/reports/attendance-summary', [HrReportsController::class, 'attendanceSummary'])->middleware('permission:hr.report.view');
+        Route::get('/reports/monthly-grid',       [HrReportsController::class, 'monthlyGrid'])->middleware('permission:hr.report.view');
     });
 
     // ─── WhatsApp Notification Module ────────────────────────────────────────────

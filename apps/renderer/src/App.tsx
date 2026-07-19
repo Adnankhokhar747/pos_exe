@@ -24,6 +24,12 @@ import { LeaseAgreementsPage } from './pages/LeaseAgreementsPage';
 import { LeaseReportsPage } from './pages/LeaseReportsPage';
 import { EInvoiceSettingsPage }    from './pages/EInvoiceSettingsPage';
 import { WhatsAppSettingsPage }   from './pages/WhatsAppSettingsPage';
+import { HrEmployeesPage }        from './pages/HrEmployeesPage';
+import { HrShiftsPage }           from './pages/HrShiftsPage';
+import { HrAttendancePage }       from './pages/HrAttendancePage';
+import { HrLeavesPage }           from './pages/HrLeavesPage';
+import { HrPayrollPage }          from './pages/HrPayrollPage';
+import { HrReportsPage }          from './pages/HrReportsPage';
 import { ProfilePage }            from './pages/ProfilePage';
 import { AppShell } from './layout/AppShell';
 import { LicenseBlockedScreen } from './layout/LicenseBlockedScreen';
@@ -228,6 +234,12 @@ export function App(): JSX.Element {
 
       <Route path="/lease/agreements" element={<RequireAuth permission="lease.agreement.manage" requiredModule="lease"><LeaseAgreementsPage /></RequireAuth>} />
       <Route path="/lease/reports"    element={<RequireAuth permission="lease.report.view"     requiredModule="lease"><LeaseReportsPage /></RequireAuth>} />
+      <Route path="/hr/employees"  element={<RequireAuth permission="hr.employee.manage"  requiredModule="hr"><HrEmployeesPage /></RequireAuth>} />
+      <Route path="/hr/shifts"     element={<RequireAuth permission="hr.employee.manage"  requiredModule="hr"><HrShiftsPage /></RequireAuth>} />
+      <Route path="/hr/attendance" element={<RequireAuth requiredModule="hr"><HrAttendancePage /></RequireAuth>} />
+      <Route path="/hr/leaves"     element={<RequireAuth permission="hr.leave.manage"     requiredModule="hr"><HrLeavesPage /></RequireAuth>} />
+      <Route path="/hr/payroll"    element={<RequireAuth permission="hr.payroll.manage"   requiredModule="hr"><HrPayrollPage /></RequireAuth>} />
+      <Route path="/hr/reports"    element={<RequireAuth permission="hr.report.view"      requiredModule="hr"><HrReportsPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

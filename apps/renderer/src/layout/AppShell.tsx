@@ -40,6 +40,9 @@ import PaymentsIcon from '@mui/icons-material/Payments';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon        from '@mui/icons-material/Logout';
@@ -149,6 +152,19 @@ const NAV_GROUPS: NavGroup[] = [
     groupIcon: <ChatBubbleIcon fontSize="small" />,
     items: [
       { path: '/whatsapp/settings', label: 'Notifications', icon: <ChatBubbleIcon fontSize="small" />, requiredModule: 'whatsapp' },
+    ],
+  },
+  {
+    label: 'HR & Payroll',
+    collapsible: true,
+    groupIcon: <BadgeIcon fontSize="small" />,
+    items: [
+      { path: '/hr/employees',  label: 'Employees',   icon: <BadgeIcon fontSize="small" />,                requiredPermission: 'hr.employee.manage',  requiredModule: 'hr' },
+      { path: '/hr/shifts',     label: 'Shifts',      icon: <AccessTimeIcon fontSize="small" />,            requiredPermission: 'hr.employee.manage',  requiredModule: 'hr' },
+      { path: '/hr/attendance', label: 'Attendance',  icon: <EventAvailableIcon fontSize="small" />,        requiredModule: 'hr' },
+      { path: '/hr/leaves',     label: 'Leaves',      icon: <BeachAccessIcon fontSize="small" />,           requiredPermission: 'hr.leave.manage',     requiredModule: 'hr' },
+      { path: '/hr/payroll',    label: 'Payroll',     icon: <AccountBalanceWalletIcon fontSize="small" />,  requiredPermission: 'hr.payroll.manage',   requiredModule: 'hr' },
+      { path: '/hr/reports',    label: 'HR Reports',  icon: <AssessmentIcon fontSize="small" />,            requiredPermission: 'hr.report.view',      requiredModule: 'hr' },
     ],
   },
   {

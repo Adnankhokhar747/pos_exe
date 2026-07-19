@@ -820,6 +820,134 @@ export interface LeaseUpcomingInstallment {
   daysUntilDue: number;
 }
 
+// ─── HR / Attendance & Payroll Module ─────────────────────────────────────────
+
+export interface HrShift {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  graceMinutes: number;
+  isActive: boolean;
+}
+
+export interface HrEmployee {
+  id: string;
+  tenantId: string;
+  userId: string | null;
+  userName: string | null;
+  employeeCode: string | null;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  department: string | null;
+  jobTitle: string | null;
+  joinDate: string | null;
+  shiftId: string | null;
+  shiftName: string | null;
+  salaryType: 'monthly' | 'daily' | 'hourly';
+  basicSalary: number;
+  housingAllowance: number;
+  transportAllowance: number;
+  otherAllowances: number;
+  grossSalary: number;
+  annualLeaveDays: number;
+  overtimeRate: number;
+  isActive: boolean;
+  notes: string | null;
+  createdAt: string;
+}
+
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'half_day' | 'on_leave';
+
+export interface HrAttendance {
+  id: string;
+  employeeId: string;
+  employeeName: string | null;
+  employeeCode: string | null;
+  workDate: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  status: AttendanceStatus;
+  workMinutes: number | null;
+  overtimeMinutes: number;
+  notes: string | null;
+}
+
+export interface HrLeaveType {
+  id: string;
+  name: string;
+  isPaid: boolean;
+  daysPerYear: number | null;
+  isActive: boolean;
+}
+
+export type LeaveStatus = 'pending' | 'approved' | 'rejected';
+
+export interface HrLeave {
+  id: string;
+  employeeId: string;
+  employeeName: string | null;
+  employeeCode: string | null;
+  leaveTypeId: string;
+  leaveTypeName: string | null;
+  isPaid: boolean | null;
+  fromDate: string;
+  toDate: string;
+  days: number;
+  reason: string | null;
+  status: LeaveStatus;
+  rejectionReason: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
+export type PayrollStatus = 'draft' | 'approved' | 'paid';
+
+export interface HrPayrollRun {
+  id: string;
+  month: number;
+  year: number;
+  workingDays: number;
+  status: PayrollStatus;
+  totalGross: number;
+  totalDeductions: number;
+  totalNet: number;
+  notes: string | null;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
+export interface HrPayslip {
+  id: string;
+  employeeId: string;
+  employeeName: string | null;
+  employeeCode: string | null;
+  department: string | null;
+  jobTitle: string | null;
+  month: number;
+  year: number;
+  workingDays: number;
+  presentDays: number;
+  absentDays: number;
+  paidLeaveDays: number;
+  unpaidLeaveDays: number;
+  lateCount: number;
+  overtimeHours: number;
+  basicSalary: number;
+  housingAllowance: number;
+  transportAllowance: number;
+  otherAllowances: number;
+  grossSalary: number;
+  absentDeduction: number;
+  unpaidLeaveDeduction: number;
+  lateDeduction: number;
+  otherDeductions: number;
+  overtimePay: number;
+  netSalary: number;
+  status: 'draft' | 'paid';
+}
+
 // ─── WhatsApp Notification Module ─────────────────────────────────────────────
 
 export type WhatsAppProvider = 'ultramsg' | 'meta' | 'twilio';
