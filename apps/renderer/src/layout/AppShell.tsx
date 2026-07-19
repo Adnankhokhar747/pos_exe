@@ -43,6 +43,7 @@ import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import PointOfSaleTwoToneIcon from '@mui/icons-material/PointOfSaleTwoTone';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon        from '@mui/icons-material/Logout';
@@ -111,8 +112,9 @@ const NAV_GROUPS: NavGroup[] = [
     collapsible: true,
     groupIcon: <AssessmentIcon fontSize="small" />,
     items: [
-      { path: '/reports',    label: 'Reports',    icon: <AssessmentIcon fontSize="small" />,     requiredPermission: 'report.view' },
-      { path: '/accounting', label: 'Accounting', icon: <AccountBalanceIcon fontSize="small" />, requiredPermission: 'expense.manage' },
+      { path: '/reports',             label: 'Reports',          icon: <AssessmentIcon fontSize="small" />,         requiredPermission: 'report.view' },
+      { path: '/accounting',          label: 'Accounting',       icon: <AccountBalanceIcon fontSize="small" />,     requiredPermission: 'expense.manage' },
+      { path: '/cash-reconciliation', label: 'Cash Reconciliation', icon: <PointOfSaleTwoToneIcon fontSize="small" />, requiredPermission: 'cash.manage' },
     ],
   },
   // ── Plugin modules — collapsed by default, expand only when needed ──

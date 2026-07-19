@@ -23,7 +23,8 @@ import { LeaseDashboardPage } from './pages/LeaseDashboardPage';
 import { LeaseAgreementsPage } from './pages/LeaseAgreementsPage';
 import { LeaseReportsPage } from './pages/LeaseReportsPage';
 import { EInvoiceSettingsPage }    from './pages/EInvoiceSettingsPage';
-import { WhatsAppSettingsPage }   from './pages/WhatsAppSettingsPage';
+import { WhatsAppSettingsPage }       from './pages/WhatsAppSettingsPage';
+import { CashReconciliationPage }     from './pages/CashReconciliationPage';
 import { HrEmployeesPage }        from './pages/HrEmployeesPage';
 import { HrShiftsPage }           from './pages/HrShiftsPage';
 import { HrAttendancePage }       from './pages/HrAttendancePage';
@@ -234,6 +235,7 @@ export function App(): JSX.Element {
 
       <Route path="/lease/agreements" element={<RequireAuth permission="lease.agreement.manage" requiredModule="lease"><LeaseAgreementsPage /></RequireAuth>} />
       <Route path="/lease/reports"    element={<RequireAuth permission="lease.report.view"     requiredModule="lease"><LeaseReportsPage /></RequireAuth>} />
+      <Route path="/cash-reconciliation" element={<RequireAuth permission="cash.manage"><CashReconciliationPage /></RequireAuth>} />
       <Route path="/hr/employees"  element={<RequireAuth permission="hr.employee.manage"  requiredModule="hr"><HrEmployeesPage /></RequireAuth>} />
       <Route path="/hr/shifts"     element={<RequireAuth permission="hr.employee.manage"  requiredModule="hr"><HrShiftsPage /></RequireAuth>} />
       <Route path="/hr/attendance" element={<RequireAuth requiredModule="hr"><HrAttendancePage /></RequireAuth>} />
