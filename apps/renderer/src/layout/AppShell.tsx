@@ -39,6 +39,7 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon        from '@mui/icons-material/Logout';
@@ -140,6 +141,14 @@ const NAV_GROUPS: NavGroup[] = [
     groupIcon: <ReceiptLongIcon fontSize="small" />,
     items: [
       { path: '/einvoice/settings', label: 'ZATCA Settings', icon: <ReceiptLongIcon fontSize="small" />, requiredModule: 'einvoice' },
+    ],
+  },
+  {
+    label: 'WhatsApp',
+    collapsible: true,
+    groupIcon: <ChatBubbleIcon fontSize="small" />,
+    items: [
+      { path: '/whatsapp/settings', label: 'Notifications', icon: <ChatBubbleIcon fontSize="small" />, requiredModule: 'whatsapp' },
     ],
   },
   {

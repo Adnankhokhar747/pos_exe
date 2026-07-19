@@ -37,7 +37,8 @@ class LeaseAgreementsController extends Controller
             ->where('status', 'paid')
             ->select('agreement_id', DB::raw('COUNT(*) as paid_count'), DB::raw('SUM(paid_amount) as total_paid'))
             ->groupBy('agreement_id')
-            ->pluck(null, 'agreement_id');
+            ->get()
+            ->keyBy('agreement_id');
 
         return response()->json(
             $agreements->map(fn($a) => array_merge(
@@ -178,7 +179,8 @@ class LeaseAgreementsController extends Controller
     public function recordInstallmentPayment(Request $request, string $agreementId, string $installmentId)
     {
         $tenantId    = $request->user()->tenant_id;
-        $installment = LeaseInstallment::where('tenant_id', $tenantId)
+        $installment = LeaseInstallment::with('agreement.customer')
+            ->where('tenant_id', $tenantId)
             ->where('agreement_id', $agreementId)
             ->findOrFail($installmentId);
 
@@ -210,7 +212,31 @@ class LeaseAgreementsController extends Controller
             LeaseAgreement::where('id', $agreementId)->update(['status' => 'completed']);
         }
 
-        return response()->json($this->formatInstallment($installment->fresh()));
+        $fresh = $installment->fresh();
+
+        // Send WhatsApp payment confirmation (best-effort)
+        try {
+            $customer = $installment->agreement?->customer;
+            if ($customer?->phone) {
+                $totalPending = LeaseInstallment::where('agreement_id', $agreementId)
+                    ->whereIn('status', ['pending', 'partial', 'overdue'])
+                    ->sum('amount');
+
+                $businessName = app(\App\Services\WhatsApp\WhatsAppService::class)->getBusinessName($tenantId);
+                app(\App\Services\WhatsApp\WhatsAppService::class)->sendInstallmentPaid($tenantId, [
+                    'installmentId'    => $installment->id,
+                    'customerName'     => $customer->name,
+                    'customerPhone'    => $customer->phone,
+                    'paidAmount'       => $validated['paidAmount'],
+                    'remainingBalance' => $totalPending,
+                    'businessName'     => $businessName,
+                ]);
+            }
+        } catch (\Throwable) {
+            // Never block payment recording
+        }
+
+        return response()->json($this->formatInstallment($fresh));
     }
 
     private function format(LeaseAgreement $a): array

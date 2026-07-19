@@ -819,3 +819,36 @@ export interface LeaseUpcomingInstallment {
   status: LeaseInstallmentStatus;
   daysUntilDue: number;
 }
+
+// ─── WhatsApp Notification Module ─────────────────────────────────────────────
+
+export type WhatsAppProvider = 'ultramsg' | 'meta' | 'twilio';
+
+export interface WhatsAppSettings {
+  tenantId: string;
+  provider: WhatsAppProvider;
+  instanceId: string | null;
+  phoneNumberId: string | null;
+  fromNumber: string | null;
+  isEnabled: boolean;
+  notifyInvoice: boolean;
+  notifyAppointment: boolean;
+  notifyInstallmentDue: boolean;
+  notifyInstallmentPaid: boolean;
+  reminderDaysBefore: number;
+  templateInvoice: string;
+  templateAppointment: string;
+  templateInstallmentDue: string;
+  templateInstallmentPaid: string;
+  hasApiToken: boolean;
+}
+
+export interface WhatsAppLog {
+  id: string;
+  toNumber: string;
+  status: 'sent' | 'failed';
+  referenceType: string | null;
+  referenceId: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+}

@@ -32,6 +32,13 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   });
 
   if (!response.ok) {
+    // Expired / invalid token — clear session and force re-login immediately
+    if (response.status === 401) {
+      setAccessToken(null);
+      window.location.replace('/login');
+      throw new ApiError(401, 'Session expired. Please log in again.', 'session_expired');
+    }
+
     const problem = await response.json().catch(() => ({ message: response.statusText }));
     // Laravel 422 validation errors: { message: "...", errors: { field: ["msg"] } }
     let detail = problem.detail ?? problem.message ?? 'Request failed.';

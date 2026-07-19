@@ -59,7 +59,7 @@ class AppointmentsController extends Controller
 
         $status = $request->appointmentType === 'walk_in' ? 'confirmed' : 'booked';
 
-        return DB::transaction(function () use ($request, $tenantId, $apptDate, $status) {
+        $appt = DB::transaction(function () use ($request, $tenantId, $apptDate, $status) {
             $tokenNumber = $this->issueToken($request->doctorId, $apptDate);
 
             return Appointment::create([
@@ -76,6 +76,27 @@ class AppointmentsController extends Controller
                 'created_by'      => $request->user()->id,
             ])->load(['doctor','patient']);
         });
+
+        // Send WhatsApp appointment notification (best-effort)
+        try {
+            $patient = $appt->patient;
+            if ($patient?->phone) {
+                $businessName = app(\App\Services\WhatsApp\WhatsAppService::class)->getBusinessName($tenantId);
+                app(\App\Services\WhatsApp\WhatsAppService::class)->sendAppointment($tenantId, [
+                    'appointmentId' => $appt->id,
+                    'patientName'   => $patient->name,
+                    'patientPhone'  => $patient->phone,
+                    'doctorName'    => $appt->doctor?->name ?? '',
+                    'tokenNumber'   => $appt->token_number,
+                    'date'          => $appt->appointment_date,
+                    'businessName'  => $businessName,
+                ]);
+            }
+        } catch (\Throwable) {
+            // Never block appointment creation
+        }
+
+        return $appt;
     }
 
     public function show(Request $request, string $id)

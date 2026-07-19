@@ -48,6 +48,7 @@ use App\Http\Controllers\Lease\LeaseAgreementsController;
 use App\Http\Controllers\Lease\LeaseReportsController;
 use App\Http\Controllers\EInvoice\EInvoiceSettingsController;
 use App\Http\Controllers\EInvoice\EInvoiceCertController;
+use App\Http\Controllers\WhatsApp\WhatsAppSettingsController;
 
 // ─── Online Patient Booking (public, no staff auth) ───────────────────────────
 Route::prefix('v1/booking')->group(function () {
@@ -427,6 +428,14 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::post('/compliance',    [EInvoiceCertController::class, 'runCompliance']);
             Route::post('/activate',      [EInvoiceCertController::class, 'activateProduction']);
         });
+    });
+
+    // ─── WhatsApp Notification Module ────────────────────────────────────────────
+    Route::prefix('whatsapp')->middleware('module:whatsapp')->group(function () {
+        Route::get('/settings',      [WhatsAppSettingsController::class, 'show']);
+        Route::patch('/settings',    [WhatsAppSettingsController::class, 'update']);
+        Route::post('/test',         [WhatsAppSettingsController::class, 'sendTest']);
+        Route::get('/logs',          [WhatsAppSettingsController::class, 'logs']);
     });
 
     // ─── Cloud Backup (tenant-facing) ─────────────────────────────────────────

@@ -222,7 +222,29 @@ class InvoicesController extends Controller
                 }
             }
 
-            return $invoice->load(['lines.product','payments','customer','patient']);
+            $loadedInvoice = $invoice->load(['lines.product','payments','customer','patient']);
+
+            // Send WhatsApp notification (non-blocking, best-effort)
+            if ($invoice->status === 'completed' && $invoice->customer_id) {
+                try {
+                    $customer = $loadedInvoice->customer;
+                    if ($customer?->phone) {
+                        $businessName = app(\App\Services\WhatsApp\WhatsAppService::class)->getBusinessName($tenantId);
+                        app(\App\Services\WhatsApp\WhatsAppService::class)->sendInvoice($tenantId, [
+                            'invoiceId'     => $invoice->id,
+                            'invoiceNumber' => $invoice->invoice_no,
+                            'customerName'  => $customer->name,
+                            'customerPhone' => $customer->phone,
+                            'grandTotal'    => $invoice->grand_total,
+                            'businessName'  => $businessName,
+                        ]);
+                    }
+                } catch (\Throwable) {
+                    // WhatsApp failure never blocks the sale
+                }
+            }
+
+            return $loadedInvoice;
         });
     }
 

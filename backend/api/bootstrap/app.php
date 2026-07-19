@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule) {
         // Daily cloud backup for all enabled tenants — runs at 02:00 every night
         $schedule->command('backup:daily-cloud')->dailyAt('02:00');
+        // WhatsApp installment due reminders — runs every morning at 08:00
+        $schedule->command('whatsapp:send-reminders')->dailyAt('08:00');
     })
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->api(prepend: [
