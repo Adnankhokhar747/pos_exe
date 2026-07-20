@@ -920,6 +920,7 @@ export interface HrPayrollRun {
 
 export interface HrPayslip {
   id: string;
+  payrollRunId: string;
   employeeId: string;
   employeeName: string | null;
   employeeCode: string | null;
@@ -944,8 +945,139 @@ export interface HrPayslip {
   lateDeduction: number;
   otherDeductions: number;
   overtimePay: number;
+  performanceBonus: number;
+  expenseReimbursement: number;
+  benefitAdjustments: number;
+  eosbProvision: number;
+  taxAmount: number;
   netSalary: number;
   status: 'draft' | 'paid';
+}
+
+// ─── HR Extended Module ────────────────────────────────────────────────────────
+
+export type HrJobStatus = 'open' | 'on_hold' | 'closed';
+export type HrApplicantStage = 'applied' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected';
+export type HrExpenseClaimStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'paid';
+
+export interface HrJob {
+  id: string;
+  tenantId: string;
+  title: string;
+  department: string | null;
+  description: string | null;
+  requirements: string | null;
+  positionsCount: number;
+  status: HrJobStatus;
+  deadline: string | null;
+  applicantsCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HrApplicant {
+  id: string;
+  tenantId: string;
+  jobId: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  nationality: string | null;
+  stage: HrApplicantStage;
+  cvNotes: string | null;
+  interviewDate: string | null;
+  offeredSalary: number | null;
+  rejectionReason: string | null;
+  hiredEmployeeId: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface HrExpenseClaim {
+  id: string;
+  tenantId: string;
+  employeeId: string;
+  employee?: { id: string; name: string; employeeCode: string | null; department: string | null };
+  periodMonth: number;
+  periodYear: number;
+  description: string | null;
+  totalAmount: number;
+  status: HrExpenseClaimStatus;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  notes: string | null;
+  items: HrExpenseClaimItem[];
+  createdAt: string;
+}
+
+export interface HrExpenseClaimItem {
+  id: string;
+  claimId: string;
+  expenseDate: string;
+  category: string;
+  description: string | null;
+  amount: number;
+  receiptRef: string | null;
+}
+
+export interface HrBenefitType {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  isTaxable: boolean;
+  isActive: boolean;
+}
+
+export interface HrEmployeeBenefit {
+  id: string;
+  tenantId: string;
+  employeeId: string;
+  benefitTypeId: string;
+  benefitType?: HrBenefitType;
+  amount: number;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  notes: string | null;
+}
+
+export interface HrTaxSetting {
+  isEnabled: boolean;
+  taxRatePct: number;
+  taxFreeAmount: number;
+  appliesTo: 'basic' | 'gross';
+  notes: string | null;
+}
+
+export interface HrEosbCalculation {
+  employeeId: string;
+  employeeName: string;
+  joinDate: string;
+  endDate: string;
+  reason: string;
+  basicSalary: number;
+  yearsOfService: number;
+  qualifyingYears: number;
+  eosbAmount: number;
+  calculationNotes: string;
+}
+
+export interface HrEndOfServiceRecord {
+  id: string;
+  tenantId: string;
+  employeeId: string;
+  employee?: { id: string; name: string; employeeCode: string | null };
+  employeeName: string;
+  joinDate: string;
+  endDate: string;
+  reason: string;
+  basicSalary: number;
+  yearsOfService: number;
+  qualifyingYears: number;
+  eosbAmount: number;
+  calculationNotes: string | null;
+  createdAt: string;
 }
 
 // ─── WhatsApp Notification Module ─────────────────────────────────────────────
@@ -979,4 +1111,110 @@ export interface WhatsAppLog {
   referenceId: string | null;
   errorMessage: string | null;
   createdAt: string;
+}
+
+// ── Restaurant Module ──────────────────────────────────────────────────────────
+
+export type RestaurantTableStatus = 'available' | 'occupied' | 'reserved' | 'cleaning';
+export type RestaurantOrderStatus = 'open' | 'closed' | 'cancelled';
+export type RestaurantKdsTicketStatus = 'pending' | 'preparing' | 'ready' | 'done';
+export type RestaurantItemKdsStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled';
+
+export interface RestaurantTable {
+  id: string;
+  tenantId: string;
+  branchId: string | null;
+  tableNumber: string;
+  label: string | null;
+  capacity: number;
+  status: RestaurantTableStatus;
+  section: string | null;
+  notes: string | null;
+  isActive: boolean;
+  activeSession?: RestaurantTableSession | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RestaurantTableSession {
+  id: string;
+  tenantId: string;
+  tableId: string;
+  openedBy: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  covers: number;
+  waiterName: string | null;
+  invoiceId: string | null;
+  notes: string | null;
+  table?: RestaurantTable;
+  order?: RestaurantOrder | null;
+}
+
+export interface RestaurantOrder {
+  id: string;
+  sessionId: string;
+  tenantId: string;
+  status: RestaurantOrderStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: RestaurantOrderItem[];
+}
+
+export interface RestaurantOrderItem {
+  id: string;
+  orderId: string;
+  productId: string | null;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  notes: string | null;
+  kdsStatus: RestaurantItemKdsStatus;
+  kdsTicketId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RestaurantKdsTicket {
+  id: string;
+  orderId: string;
+  tenantId: string;
+  tableNumber: string | null;
+  tableLabel: string | null;
+  covers: number | null;
+  status: RestaurantKdsTicketStatus;
+  sentAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  items: RestaurantOrderItem[];
+}
+
+export interface RestaurantMenuSetting {
+  categoryId: string;
+  categoryName: string;
+  isVisible: boolean;
+  sortOrder: number;
+}
+
+export interface RestaurantSplitBill {
+  id: string;
+  sessionId: string;
+  tenantId: string;
+  splitCount: number;
+  totalAmount: number;
+  status: 'pending' | 'completed';
+  parties: RestaurantSplitParty[];
+  createdAt: string;
+}
+
+export interface RestaurantSplitParty {
+  id: string;
+  splitBillId: string;
+  partyNumber: number;
+  amount: number;
+  isPaid: boolean;
+  invoiceId: string | null;
+  paidAt: string | null;
 }

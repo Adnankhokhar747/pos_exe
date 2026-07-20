@@ -17,7 +17,10 @@ trait SeedsSystemRoles
             'Receptionist'     => ['hospital.patient.manage','hospital.appointment.manage','hospital.appointment.viewAll'],
             'Doctor'           => ['hospital.appointment.manage'],
             'Hospital Manager' => ['hospital.doctor.manage','hospital.patient.manage','hospital.appointment.manage','hospital.appointment.viewAll','hospital.report.view'],
-            'HR Manager'       => ['hr.employee.manage','hr.attendance.manage','hr.leave.manage','hr.payroll.manage','hr.report.view'],
+            'HR Manager'          => ['hr.employee.manage','hr.attendance.manage','hr.leave.manage','hr.payroll.manage','hr.report.view','hr.recruitment.manage','hr.expense.manage','hr.benefits.manage'],
+            'Waiter'              => ['restaurant.order.manage','restaurant.split.manage'],
+            'Kitchen Staff'       => ['restaurant.kds.view'],
+            'Restaurant Manager'  => ['restaurant.table.manage','restaurant.order.manage','restaurant.kds.view','restaurant.split.manage','restaurant.report.view'],
         ];
 
         $allPermissions = DB::table('permissions')->get()->keyBy('code');

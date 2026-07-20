@@ -55,6 +55,14 @@ use App\Http\Controllers\Hr\HrAttendanceController;
 use App\Http\Controllers\Hr\HrLeavesController;
 use App\Http\Controllers\Hr\HrPayrollController;
 use App\Http\Controllers\Hr\HrReportsController;
+use App\Http\Controllers\Hr\HrRecruitmentController;
+use App\Http\Controllers\Hr\HrExpenseClaimsController;
+use App\Http\Controllers\Hr\HrBenefitsController;
+use App\Http\Controllers\Hr\HrEndBenefitsController;
+use App\Http\Controllers\Restaurant\RestaurantTablesController;
+use App\Http\Controllers\Restaurant\RestaurantOrdersController;
+use App\Http\Controllers\Restaurant\RestaurantKdsController;
+use App\Http\Controllers\Restaurant\RestaurantMenuSettingsController;
 
 // ─── Online Patient Booking (public, no staff auth) ───────────────────────────
 Route::prefix('v1/booking')->group(function () {
@@ -482,6 +490,88 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
         // Reports
         Route::get('/reports/attendance-summary', [HrReportsController::class, 'attendanceSummary'])->middleware('permission:hr.report.view');
         Route::get('/reports/monthly-grid',       [HrReportsController::class, 'monthlyGrid'])->middleware('permission:hr.report.view');
+
+        // Recruitment
+        Route::prefix('recruitment')->middleware('permission:hr.recruitment.manage')->group(function () {
+            Route::get('/jobs',                             [HrRecruitmentController::class, 'listJobs']);
+            Route::post('/jobs',                            [HrRecruitmentController::class, 'storeJob']);
+            Route::patch('/jobs/{id}',                      [HrRecruitmentController::class, 'updateJob']);
+            Route::get('/jobs/{jobId}/applicants',          [HrRecruitmentController::class, 'listApplicants']);
+            Route::post('/jobs/{jobId}/applicants',         [HrRecruitmentController::class, 'storeApplicant']);
+            Route::patch('/applicants/{id}',                [HrRecruitmentController::class, 'updateApplicant']);
+            Route::delete('/applicants/{id}',               [HrRecruitmentController::class, 'destroyApplicant']);
+        });
+
+        // Expense Claims
+        Route::prefix('expense-claims')->group(function () {
+            Route::get('/',                                  [HrExpenseClaimsController::class, 'index']);
+            Route::post('/',                                 [HrExpenseClaimsController::class, 'store']);
+            Route::get('/{id}',                              [HrExpenseClaimsController::class, 'show']);
+            Route::patch('/{id}/submit',                     [HrExpenseClaimsController::class, 'submit']);
+            Route::patch('/{id}/approve',                    [HrExpenseClaimsController::class, 'approve'])->middleware('permission:hr.expense.manage');
+            Route::patch('/{id}/reject',                     [HrExpenseClaimsController::class, 'reject'])->middleware('permission:hr.expense.manage');
+            Route::delete('/{id}',                           [HrExpenseClaimsController::class, 'destroy']);
+        });
+
+        // Benefits & Tax
+        Route::prefix('benefits')->middleware('permission:hr.benefits.manage')->group(function () {
+            Route::get('/types',                             [HrBenefitsController::class, 'listTypes']);
+            Route::post('/types',                            [HrBenefitsController::class, 'storeType']);
+            Route::patch('/types/{id}',                      [HrBenefitsController::class, 'updateType']);
+            Route::get('/employees/{employeeId}',            [HrBenefitsController::class, 'listEmployeeBenefits']);
+            Route::post('/employees/{employeeId}',           [HrBenefitsController::class, 'assignBenefit']);
+            Route::patch('/employee-benefits/{id}',          [HrBenefitsController::class, 'updateBenefit']);
+            Route::delete('/employee-benefits/{id}',         [HrBenefitsController::class, 'removeBenefit']);
+            Route::get('/tax-settings',                      [HrBenefitsController::class, 'getTaxSettings']);
+            Route::put('/tax-settings',                      [HrBenefitsController::class, 'upsertTaxSettings']);
+        });
+
+        // Payslip manual bonus/deduction adjustment
+        Route::patch('/payslips/{payslipId}/adjustments', [HrBenefitsController::class, 'updatePayslipBonus'])
+            ->middleware('permission:hr.payroll.manage');
+
+        // End of Service Benefits (EOSB)
+        Route::prefix('end-of-service')->middleware('permission:hr.benefits.manage')->group(function () {
+            Route::get('/',              [HrEndBenefitsController::class, 'index']);
+            Route::post('/calculate',    [HrEndBenefitsController::class, 'calculate']);
+            Route::post('/',             [HrEndBenefitsController::class, 'store']);
+        });
+    });
+
+    // ─── Restaurant Module ────────────────────────────────────────────────────────
+    Route::prefix('restaurant')->middleware('module:restaurant')->group(function () {
+        // Tables
+        Route::get('/tables',                          [RestaurantTablesController::class, 'index']);
+        Route::post('/tables',                         [RestaurantTablesController::class, 'store'])->middleware('permission:restaurant.table.manage');
+        Route::get('/tables/{id}',                     [RestaurantTablesController::class, 'show']);
+        Route::patch('/tables/{id}',                   [RestaurantTablesController::class, 'update'])->middleware('permission:restaurant.table.manage');
+        Route::delete('/tables/{id}',                  [RestaurantTablesController::class, 'destroy'])->middleware('permission:restaurant.table.manage');
+        Route::patch('/tables/{id}/status',            [RestaurantTablesController::class, 'setStatus'])->middleware('permission:restaurant.table.manage');
+
+        // Sessions (open/close table sittings)
+        Route::post('/tables/{id}/sessions',           [RestaurantTablesController::class, 'openSession'])->middleware('permission:restaurant.order.manage');
+        Route::get('/sessions/{id}',                   [RestaurantTablesController::class, 'showSession']);
+        Route::patch('/sessions/{id}/close',           [RestaurantTablesController::class, 'closeSession'])->middleware('permission:restaurant.order.manage');
+
+        // Orders
+        Route::get('/orders/{id}',                     [RestaurantOrdersController::class, 'show']);
+        Route::post('/orders/{id}/items',              [RestaurantOrdersController::class, 'addItem'])->middleware('permission:restaurant.order.manage');
+        Route::patch('/order-items/{id}',              [RestaurantOrdersController::class, 'updateItem'])->middleware('permission:restaurant.order.manage');
+        Route::delete('/order-items/{id}',             [RestaurantOrdersController::class, 'removeItem'])->middleware('permission:restaurant.order.manage');
+        Route::post('/orders/{id}/send',               [RestaurantOrdersController::class, 'sendToKitchen'])->middleware('permission:restaurant.order.manage');
+
+        // KDS
+        Route::get('/kds',                             [RestaurantKdsController::class, 'index'])->middleware('permission:restaurant.kds.view');
+        Route::patch('/kds/{id}/status',               [RestaurantKdsController::class, 'updateStatus'])->middleware('permission:restaurant.kds.view');
+
+        // Split Bills
+        Route::post('/split-bills',                    [RestaurantOrdersController::class, 'createSplitBill'])->middleware('permission:restaurant.split.manage');
+        Route::get('/split-bills/{id}',                [RestaurantOrdersController::class, 'showSplitBill']);
+        Route::patch('/split-bills/{id}/parties/{partyId}/pay', [RestaurantOrdersController::class, 'payParty'])->middleware('permission:restaurant.split.manage');
+
+        // Menu category settings
+        Route::get('/menu-settings',                   [RestaurantMenuSettingsController::class, 'index']);
+        Route::patch('/menu-settings',                 [RestaurantMenuSettingsController::class, 'upsert'])->middleware('permission:restaurant.table.manage');
     });
 
     // ─── WhatsApp Notification Module ────────────────────────────────────────────

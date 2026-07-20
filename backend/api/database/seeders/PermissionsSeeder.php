@@ -31,6 +31,14 @@ class PermissionsSeeder extends Seeder
         ['code' => 'hr.leave.manage',                'module' => 'hr',       'description' => 'Approve or reject employee leave requests'],
         ['code' => 'hr.payroll.manage',              'module' => 'hr',       'description' => 'Generate and process monthly payroll'],
         ['code' => 'hr.report.view',                 'module' => 'hr',       'description' => 'View HR attendance and payroll reports'],
+        ['code' => 'hr.recruitment.manage',          'module' => 'hr',       'description' => 'Create and manage job postings and applicant pipeline'],
+        ['code' => 'hr.expense.manage',              'module' => 'hr',       'description' => 'Approve and manage employee expense claims'],
+        ['code' => 'hr.benefits.manage',             'module' => 'hr',       'description' => 'Manage benefit types, employee benefits, tax settings, and EOSB'],
+        ['code' => 'restaurant.table.manage',        'module' => 'restaurant', 'description' => 'Create, edit, and manage tables and open/close sessions'],
+        ['code' => 'restaurant.order.manage',        'module' => 'restaurant', 'description' => 'Create and manage dine-in orders and send items to the kitchen'],
+        ['code' => 'restaurant.kds.view',            'module' => 'restaurant', 'description' => 'View and update the Kitchen Display System'],
+        ['code' => 'restaurant.split.manage',        'module' => 'restaurant', 'description' => 'Create and process split bills for tables'],
+        ['code' => 'restaurant.report.view',         'module' => 'restaurant', 'description' => 'View restaurant sales and table-turn reports'],
     ];
 
     const SYSTEM_ROLE_PERMISSIONS = [
@@ -77,6 +85,23 @@ class PermissionsSeeder extends Seeder
             'hr.leave.manage',
             'hr.payroll.manage',
             'hr.report.view',
+            'hr.recruitment.manage',
+            'hr.expense.manage',
+            'hr.benefits.manage',
+        ],
+        'Waiter' => [
+            'restaurant.order.manage',
+            'restaurant.split.manage',
+        ],
+        'Kitchen Staff' => [
+            'restaurant.kds.view',
+        ],
+        'Restaurant Manager' => [
+            'restaurant.table.manage',
+            'restaurant.order.manage',
+            'restaurant.kds.view',
+            'restaurant.split.manage',
+            'restaurant.report.view',
         ],
     ];
 

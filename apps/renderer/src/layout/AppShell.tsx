@@ -44,10 +44,17 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import PointOfSaleTwoToneIcon from '@mui/icons-material/PointOfSaleTwoTone';
+import TableRestaurantIcon from '@mui/icons-material/TableRestaurant';
+import KitchenIcon from '@mui/icons-material/Kitchen';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import LogoutIcon        from '@mui/icons-material/Logout';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import WorkIcon from '@mui/icons-material/Work';
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth-context';
 import { useLicense } from '../state/license-context';
@@ -165,8 +172,22 @@ const NAV_GROUPS: NavGroup[] = [
       { path: '/hr/shifts',     label: 'Shifts',      icon: <AccessTimeIcon fontSize="small" />,            requiredPermission: 'hr.employee.manage',  requiredModule: 'hr' },
       { path: '/hr/attendance', label: 'Attendance',  icon: <EventAvailableIcon fontSize="small" />,        requiredModule: 'hr' },
       { path: '/hr/leaves',     label: 'Leaves',      icon: <BeachAccessIcon fontSize="small" />,           requiredPermission: 'hr.leave.manage',     requiredModule: 'hr' },
-      { path: '/hr/payroll',    label: 'Payroll',     icon: <AccountBalanceWalletIcon fontSize="small" />,  requiredPermission: 'hr.payroll.manage',   requiredModule: 'hr' },
-      { path: '/hr/reports',    label: 'HR Reports',  icon: <AssessmentIcon fontSize="small" />,            requiredPermission: 'hr.report.view',      requiredModule: 'hr' },
+      { path: '/hr/payroll',        label: 'Payroll',        icon: <AccountBalanceWalletIcon fontSize="small" />,  requiredPermission: 'hr.payroll.manage',       requiredModule: 'hr' },
+      { path: '/hr/reports',        label: 'HR Reports',     icon: <AssessmentIcon fontSize="small" />,            requiredPermission: 'hr.report.view',          requiredModule: 'hr' },
+      { path: '/hr/recruitment',    label: 'Recruitment',    icon: <WorkIcon fontSize="small" />,                  requiredPermission: 'hr.recruitment.manage',   requiredModule: 'hr' },
+      { path: '/hr/expense-claims', label: 'Expense Claims', icon: <ReceiptLongIcon fontSize="small" />,           requiredModule: 'hr' },
+      { path: '/hr/benefits',       label: 'Benefits & Tax', icon: <CardGiftcardIcon fontSize="small" />,          requiredPermission: 'hr.benefits.manage',      requiredModule: 'hr' },
+      { path: '/hr/end-of-service', label: 'EOSB / Gratuity', icon: <ExitToAppIcon fontSize="small" />,           requiredPermission: 'hr.benefits.manage',      requiredModule: 'hr' },
+    ],
+  },
+  {
+    label: 'Restaurant',
+    collapsible: true,
+    groupIcon: <RestaurantMenuIcon fontSize="small" />,
+    items: [
+      { path: '/restaurant/tables',     label: 'Tables',       icon: <TableRestaurantIcon fontSize="small" />,  requiredModule: 'restaurant' },
+      { path: '/restaurant/kds',        label: 'Kitchen (KDS)', icon: <KitchenIcon fontSize="small" />,         requiredPermission: 'restaurant.kds.view',    requiredModule: 'restaurant' },
+      { path: '/restaurant/categories', label: 'Menu Cats.',   icon: <MenuBookIcon fontSize="small" />,         requiredPermission: 'restaurant.table.manage', requiredModule: 'restaurant' },
     ],
   },
   {

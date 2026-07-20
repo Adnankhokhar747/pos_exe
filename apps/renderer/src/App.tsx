@@ -25,12 +25,20 @@ import { LeaseReportsPage } from './pages/LeaseReportsPage';
 import { EInvoiceSettingsPage }    from './pages/EInvoiceSettingsPage';
 import { WhatsAppSettingsPage }       from './pages/WhatsAppSettingsPage';
 import { CashReconciliationPage }     from './pages/CashReconciliationPage';
+import { RestaurantTablesPage }       from './pages/RestaurantTablesPage';
+import { RestaurantOrderPage }        from './pages/RestaurantOrderPage';
+import { RestaurantKdsPage }          from './pages/RestaurantKdsPage';
+import { RestaurantCategoriesPage }   from './pages/RestaurantCategoriesPage';
 import { HrEmployeesPage }        from './pages/HrEmployeesPage';
 import { HrShiftsPage }           from './pages/HrShiftsPage';
 import { HrAttendancePage }       from './pages/HrAttendancePage';
 import { HrLeavesPage }           from './pages/HrLeavesPage';
 import { HrPayrollPage }          from './pages/HrPayrollPage';
 import { HrReportsPage }          from './pages/HrReportsPage';
+import HrRecruitmentPage          from './pages/HrRecruitmentPage';
+import HrExpenseClaimsPage        from './pages/HrExpenseClaimsPage';
+import HrBenefitsPage             from './pages/HrBenefitsPage';
+import HrEndBenefitsPage          from './pages/HrEndBenefitsPage';
 import { ProfilePage }            from './pages/ProfilePage';
 import { AppShell } from './layout/AppShell';
 import { LicenseBlockedScreen } from './layout/LicenseBlockedScreen';
@@ -240,8 +248,16 @@ export function App(): JSX.Element {
       <Route path="/hr/shifts"     element={<RequireAuth permission="hr.employee.manage"  requiredModule="hr"><HrShiftsPage /></RequireAuth>} />
       <Route path="/hr/attendance" element={<RequireAuth requiredModule="hr"><HrAttendancePage /></RequireAuth>} />
       <Route path="/hr/leaves"     element={<RequireAuth permission="hr.leave.manage"     requiredModule="hr"><HrLeavesPage /></RequireAuth>} />
-      <Route path="/hr/payroll"    element={<RequireAuth permission="hr.payroll.manage"   requiredModule="hr"><HrPayrollPage /></RequireAuth>} />
-      <Route path="/hr/reports"    element={<RequireAuth permission="hr.report.view"      requiredModule="hr"><HrReportsPage /></RequireAuth>} />
+      <Route path="/hr/payroll"        element={<RequireAuth permission="hr.payroll.manage"     requiredModule="hr"><HrPayrollPage /></RequireAuth>} />
+      <Route path="/hr/reports"        element={<RequireAuth permission="hr.report.view"        requiredModule="hr"><HrReportsPage /></RequireAuth>} />
+      <Route path="/hr/recruitment"    element={<RequireAuth permission="hr.recruitment.manage"  requiredModule="hr"><HrRecruitmentPage /></RequireAuth>} />
+      <Route path="/hr/expense-claims" element={<RequireAuth requiredModule="hr"><HrExpenseClaimsPage /></RequireAuth>} />
+      <Route path="/hr/benefits"       element={<RequireAuth permission="hr.benefits.manage"     requiredModule="hr"><HrBenefitsPage /></RequireAuth>} />
+      <Route path="/hr/end-of-service" element={<RequireAuth permission="hr.benefits.manage"     requiredModule="hr"><HrEndBenefitsPage /></RequireAuth>} />
+      <Route path="/restaurant/tables"     element={<RequireAuth requiredModule="restaurant"><RestaurantTablesPage /></RequireAuth>} />
+      <Route path="/restaurant/order/:sessionId" element={<RequireAuth permission="restaurant.order.manage" requiredModule="restaurant"><RestaurantOrderPage /></RequireAuth>} />
+      <Route path="/restaurant/kds"        element={<RequireAuth permission="restaurant.kds.view" requiredModule="restaurant"><RestaurantKdsPage /></RequireAuth>} />
+      <Route path="/restaurant/categories" element={<RequireAuth permission="restaurant.table.manage" requiredModule="restaurant"><RestaurantCategoriesPage /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
