@@ -35,30 +35,38 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->render(function (DomainException $e, Request $request) {
-            return response()->json([
+        // Attach CORS headers to every error response so the browser
+        // receives a proper JSON error instead of "Failed to fetch".
+        $cors = fn($response) => $response->withHeaders([
+            'Access-Control-Allow-Origin'  => '*',
+            'Access-Control-Allow-Methods' => '*',
+            'Access-Control-Allow-Headers' => '*',
+        ]);
+
+        $exceptions->render(function (DomainException $e, Request $request) use ($cors) {
+            return $cors(response()->json([
                 'error' => $e->getErrorCode(),
                 'message' => $e->getMessage(),
-            ], $e->getHttpStatus());
+            ], $e->getHttpStatus()));
         });
 
-        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
-            return response()->json(['error' => 'not_found', 'message' => 'Resource not found.'], 404);
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) use ($cors) {
+            return $cors(response()->json(['error' => 'not_found', 'message' => 'Resource not found.'], 404));
         });
 
-        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
-            return response()->json(['error' => 'method_not_allowed', 'message' => 'Method not allowed.'], 405);
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) use ($cors) {
+            return $cors(response()->json(['error' => 'method_not_allowed', 'message' => 'Method not allowed.'], 405));
         });
 
-        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
-            return response()->json(['error' => 'unauthenticated', 'message' => 'Unauthenticated.'], 401);
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) use ($cors) {
+            return $cors(response()->json(['error' => 'unauthenticated', 'message' => 'Unauthenticated.'], 401));
         });
 
-        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
-            return response()->json([
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) use ($cors) {
+            return $cors(response()->json([
                 'error'   => 'validation_error',
                 'message' => 'Validation failed.',
                 'errors'  => $e->errors(),
-            ], 422);
+            ], 422));
         });
     })->create();

@@ -43,16 +43,18 @@ class DoctorsController extends Controller
         }
 
         $doctor = Doctor::create([
-            'id'              => (string) \Illuminate\Support\Str::uuid(),
-            'tenant_id'       => $request->user()->tenant_id,
-            'linked_user_id'  => $request->linkedUserId,
-            'name'            => $request->name,
-            'specialization'  => $request->specialization,
-            'phone'           => $request->phone,
-            'email'           => $request->email,
-            'room_number'     => $request->roomNumber,
-            'consultation_fee'        => $request->consultationFee ?? 0,
-            'max_daily_appointments'  => $request->maxDailyAppointments ?? 30,
+            'id'                   => (string) \Illuminate\Support\Str::uuid(),
+            'tenant_id'            => $request->user()->tenant_id,
+            'linked_user_id'       => $request->linkedUserId,
+            'name'                 => $request->name,
+            'specialization'       => $request->specialization,
+            'phone'                => $request->phone,
+            'email'                => $request->email,
+            'room_number'          => $request->roomNumber,
+            'consultation_fee'     => $request->consultationFee ?? 0,
+            'max_daily_appointments' => $request->maxDailyAppointments ?? 30,
+            'lab_commission_pct'   => $request->labCommissionPct ?? 0,
+            'checkup_commission_pct' => $request->checkupCommissionPct ?? 0,
         ]);
 
         return $doctor->load(['schedules','linkedUser']);
@@ -78,15 +80,17 @@ class DoctorsController extends Controller
         }
 
         $doctor->update(array_filter([
-            'linked_user_id'         => $request->linkedUserId,
-            'name'                   => $request->name,
-            'specialization'         => $request->specialization,
-            'phone'                  => $request->phone,
-            'email'                  => $request->email,
-            'room_number'            => $request->roomNumber,
-            'consultation_fee'       => $request->consultationFee,
-            'is_active'              => $request->isActive,
-            'max_daily_appointments' => $request->maxDailyAppointments,
+            'linked_user_id'          => $request->linkedUserId,
+            'name'                    => $request->name,
+            'specialization'          => $request->specialization,
+            'phone'                   => $request->phone,
+            'email'                   => $request->email,
+            'room_number'             => $request->roomNumber,
+            'consultation_fee'        => $request->consultationFee,
+            'is_active'               => $request->isActive,
+            'max_daily_appointments'  => $request->maxDailyAppointments,
+            'lab_commission_pct'      => $request->labCommissionPct,
+            'checkup_commission_pct'  => $request->checkupCommissionPct,
         ], fn($v) => $v !== null));
 
         return $doctor->load(['schedules','linkedUser']);

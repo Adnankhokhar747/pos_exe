@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Hr;
 
 use App\Http\Controllers\Controller;
+use App\Models\HrAdvance;
 use App\Models\HrPayrollRun;
 use App\Models\HrPayslip;
 use App\Services\Hr\HrPayrollService;
@@ -113,6 +114,35 @@ class HrPayrollController extends Controller
         $run->update(['status' => 'paid']);
         HrPayslip::where('payroll_run_id', $run->id)->update(['status' => 'paid']);
 
+        // Decrement remaining_balance on active advances for employees with advance deductions
+        $payslips = HrPayslip::where('payroll_run_id', $run->id)
+            ->where('advance_deduction', '>', 0)
+            ->get();
+
+        foreach ($payslips as $payslip) {
+            $advances = HrAdvance::where('employee_id', $payslip->employee_id)
+                ->where('status', 'active')
+                ->get();
+
+            foreach ($advances as $advance) {
+                if ($advance->deduction_type === 'full_once') {
+                    $advance->update([
+                        'remaining_balance' => 0,
+                        'installments_paid' => $advance->installments_paid + 1,
+                        'status'            => 'completed',
+                    ]);
+                } else {
+                    $deducted = min((float) $advance->monthly_installment, (float) $advance->remaining_balance);
+                    $newBalance = round((float) $advance->remaining_balance - $deducted, 2);
+                    $advance->update([
+                        'remaining_balance' => $newBalance,
+                        'installments_paid' => $advance->installments_paid + 1,
+                        'status'            => $newBalance <= 0 ? 'completed' : 'active',
+                    ]);
+                }
+            }
+        }
+
         return response()->json($this->format($run->fresh()));
     }
 
@@ -174,6 +204,7 @@ class HrPayrollController extends Controller
             'unpaidLeaveDeduction'  => (float) $p->unpaid_leave_deduction,
             'lateDeduction'         => (float) $p->late_deduction,
             'otherDeductions'       => (float) $p->other_deductions,
+            'advanceDeduction'      => (float) ($p->advance_deduction ?? 0),
             'overtimePay'           => (float) $p->overtime_pay,
             'performanceBonus'      => (float) ($p->performance_bonus ?? 0),
             'expenseReimbursement'  => (float) ($p->expense_reimbursement ?? 0),

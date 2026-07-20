@@ -33,6 +33,11 @@ use App\Http\Controllers\Hospital\AppointmentsController;
 use App\Http\Controllers\Hospital\AppointmentBillingController;
 use App\Http\Controllers\Hospital\QueueController;
 use App\Http\Controllers\Hospital\HospitalReportsController;
+use App\Http\Controllers\Hospital\CheckupCommissionsController;
+use App\Http\Controllers\Lab\LabTestsController;
+use App\Http\Controllers\Lab\LabOrdersController;
+use App\Http\Controllers\Lab\LabCommissionsController;
+use App\Http\Controllers\Lab\PharmacyController;
 use App\Http\Controllers\Reports\ReportsController;
 use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Settings\AccountingController;
@@ -59,6 +64,7 @@ use App\Http\Controllers\Hr\HrRecruitmentController;
 use App\Http\Controllers\Hr\HrExpenseClaimsController;
 use App\Http\Controllers\Hr\HrBenefitsController;
 use App\Http\Controllers\Hr\HrEndBenefitsController;
+use App\Http\Controllers\Hr\HrAdvancesController;
 use App\Http\Controllers\Restaurant\RestaurantTablesController;
 use App\Http\Controllers\Restaurant\RestaurantOrdersController;
 use App\Http\Controllers\Restaurant\RestaurantKdsController;
@@ -402,6 +408,52 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
             Route::get('/monthly-patients', [HospitalReportsController::class, 'monthlyPatients']);
             Route::get('/revenue', [HospitalReportsController::class, 'revenue']);
         });
+
+        // ── Doctor Checkup/Consultation Commissions ───────────────────────────
+        Route::prefix('checkup-commissions')->middleware('permission:hospital.report.view')->group(function () {
+            Route::get('/',                        [CheckupCommissionsController::class, 'index']);
+            Route::post('/payments',               [CheckupCommissionsController::class, 'recordPayment']);
+            Route::get('/{doctorId}/payments',     [CheckupCommissionsController::class, 'paymentHistory']);
+        });
+
+        // ── Lab Sub-Module (gated under hospital module) ──────────────────────
+        Route::prefix('lab')->group(function () {
+
+            Route::get('/tests/categories', [LabTestsController::class, 'categories']);
+            Route::prefix('tests')->middleware('permission:hospital.lab.manage')->group(function () {
+                Route::get('/', [LabTestsController::class, 'index']);
+                Route::post('/', [LabTestsController::class, 'store']);
+                Route::patch('/{id}', [LabTestsController::class, 'update']);
+            });
+
+            Route::prefix('orders')->group(function () {
+                Route::get('/', [LabOrdersController::class, 'index']);
+                Route::post('/', [LabOrdersController::class, 'store'])->middleware('permission:hospital.lab.manage');
+                Route::get('/{id}', [LabOrdersController::class, 'show']);
+                Route::post('/{id}/collect', [LabOrdersController::class, 'collectSamples'])->middleware('permission:hospital.lab.results');
+                Route::post('/{id}/cancel', [LabOrdersController::class, 'cancel'])->middleware('permission:hospital.lab.manage');
+            });
+
+            Route::prefix('items')->middleware('permission:hospital.lab.results')->group(function () {
+                Route::post('/{itemId}/result', [LabOrdersController::class, 'enterResult']);
+                Route::post('/{itemId}/verify', [LabOrdersController::class, 'verifyResult']);
+            });
+
+            // ── Doctor Lab Commissions ─────────────────────────────────────────
+            Route::prefix('commissions')->middleware('permission:hospital.lab.manage')->group(function () {
+                Route::get('/',                          [LabCommissionsController::class, 'index']);
+                Route::post('/payments',                 [LabCommissionsController::class, 'recordPayment']);
+                Route::get('/{doctorId}/payments',       [LabCommissionsController::class, 'paymentHistory']);
+            });
+        });
+
+        // ── Pharmacy (hospital-only POS data) ─────────────────────────────────
+        Route::prefix('pharmacy')->group(function () {
+            Route::get('/categories', [PharmacyController::class, 'listCategories']);
+            Route::patch('/categories/{id}/pharmacy', [PharmacyController::class, 'togglePharmacy'])->middleware('permission:hospital.patient.manage');
+            Route::get('/products', [PharmacyController::class, 'pharmacyProducts']);
+            Route::get('/patients', [PharmacyController::class, 'patients']);
+        });
     });
 
     // ─── Lease Module ─────────────────────────────────────────────────────────────
@@ -465,6 +517,7 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
         Route::post('/attendance/clock-out', [HrAttendanceController::class, 'clockOut']);
         Route::get('/attendance',      [HrAttendanceController::class, 'index']);
         Route::post('/attendance',     [HrAttendanceController::class, 'upsert'])->middleware('permission:hr.attendance.manage');
+        Route::post('/attendance/bulk', [HrAttendanceController::class, 'bulkUpsert'])->middleware('permission:hr.attendance.manage');
 
         // Leave types
         Route::get('/leave-types',        [HrLeavesController::class, 'listTypes']);
@@ -486,6 +539,11 @@ Route::prefix('v1')->middleware(['jwt.auth', 'license'])->group(function () {
         Route::patch('/payroll/{id}/approve',   [HrPayrollController::class, 'approve'])->middleware('permission:hr.payroll.manage');
         Route::patch('/payroll/{id}/mark-paid', [HrPayrollController::class, 'markPaid'])->middleware('permission:hr.payroll.manage');
         Route::delete('/payroll/{id}',     [HrPayrollController::class, 'destroy'])->middleware('permission:hr.payroll.manage');
+
+        // Employee Advances
+        Route::get('/advances',         [HrAdvancesController::class, 'index'])->middleware('permission:hr.payroll.manage');
+        Route::post('/advances',        [HrAdvancesController::class, 'store'])->middleware('permission:hr.payroll.manage');
+        Route::patch('/advances/{id}/cancel', [HrAdvancesController::class, 'cancel'])->middleware('permission:hr.payroll.manage');
 
         // Reports
         Route::get('/reports/attendance-summary', [HrReportsController::class, 'attendanceSummary'])->middleware('permission:hr.report.view');

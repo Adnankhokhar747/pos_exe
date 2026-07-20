@@ -34,6 +34,8 @@ class PermissionsSeeder extends Seeder
         ['code' => 'hr.recruitment.manage',          'module' => 'hr',       'description' => 'Create and manage job postings and applicant pipeline'],
         ['code' => 'hr.expense.manage',              'module' => 'hr',       'description' => 'Approve and manage employee expense claims'],
         ['code' => 'hr.benefits.manage',             'module' => 'hr',       'description' => 'Manage benefit types, employee benefits, tax settings, and EOSB'],
+        ['code' => 'hospital.lab.manage',            'module' => 'hospital', 'description' => 'Manage lab test catalog and create lab orders'],
+        ['code' => 'hospital.lab.results',           'module' => 'hospital', 'description' => 'Enter and verify lab test results'],
         ['code' => 'restaurant.table.manage',        'module' => 'restaurant', 'description' => 'Create, edit, and manage tables and open/close sessions'],
         ['code' => 'restaurant.order.manage',        'module' => 'restaurant', 'description' => 'Create and manage dine-in orders and send items to the kitchen'],
         ['code' => 'restaurant.kds.view',            'module' => 'restaurant', 'description' => 'View and update the Kitchen Display System'],
@@ -78,6 +80,8 @@ class PermissionsSeeder extends Seeder
             'hospital.appointment.manage',
             'hospital.appointment.viewAll',
             'hospital.report.view',
+            'hospital.lab.manage',
+            'hospital.lab.results',
         ],
         'HR Manager' => [
             'hr.employee.manage',

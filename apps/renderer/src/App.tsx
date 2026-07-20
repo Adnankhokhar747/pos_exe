@@ -34,11 +34,18 @@ import { HrShiftsPage }           from './pages/HrShiftsPage';
 import { HrAttendancePage }       from './pages/HrAttendancePage';
 import { HrLeavesPage }           from './pages/HrLeavesPage';
 import { HrPayrollPage }          from './pages/HrPayrollPage';
+import { HrAdvancesPage }         from './pages/HrAdvancesPage';
 import { HrReportsPage }          from './pages/HrReportsPage';
 import HrRecruitmentPage          from './pages/HrRecruitmentPage';
 import HrExpenseClaimsPage        from './pages/HrExpenseClaimsPage';
 import HrBenefitsPage             from './pages/HrBenefitsPage';
 import HrEndBenefitsPage          from './pages/HrEndBenefitsPage';
+import { LabTestCatalogPage }        from './pages/LabTestCatalogPage';
+import { LabOrdersPage }             from './pages/LabOrdersPage';
+import { LabDoctorCommissionsPage }      from './pages/LabDoctorCommissionsPage';
+import { DoctorCheckupCommissionsPage }  from './pages/DoctorCheckupCommissionsPage';
+import { PharmacyPosPage }        from './pages/PharmacyPosPage';
+import { PharmacySettingsPage }   from './pages/PharmacySettingsPage';
 import { ProfilePage }            from './pages/ProfilePage';
 import { AppShell } from './layout/AppShell';
 import { LicenseBlockedScreen } from './layout/LicenseBlockedScreen';
@@ -229,6 +236,14 @@ export function App(): JSX.Element {
         }
       />
       <Route
+        path="/hospital/checkup-commissions"
+        element={
+          <RequireAuth permission="hospital.report.view" requiredModule="hospital">
+            <DoctorCheckupCommissionsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/dashboard"
         element={
           <RequireAuth>
@@ -249,11 +264,17 @@ export function App(): JSX.Element {
       <Route path="/hr/attendance" element={<RequireAuth requiredModule="hr"><HrAttendancePage /></RequireAuth>} />
       <Route path="/hr/leaves"     element={<RequireAuth permission="hr.leave.manage"     requiredModule="hr"><HrLeavesPage /></RequireAuth>} />
       <Route path="/hr/payroll"        element={<RequireAuth permission="hr.payroll.manage"     requiredModule="hr"><HrPayrollPage /></RequireAuth>} />
+      <Route path="/hr/advances"       element={<RequireAuth permission="hr.payroll.manage"     requiredModule="hr"><HrAdvancesPage /></RequireAuth>} />
       <Route path="/hr/reports"        element={<RequireAuth permission="hr.report.view"        requiredModule="hr"><HrReportsPage /></RequireAuth>} />
       <Route path="/hr/recruitment"    element={<RequireAuth permission="hr.recruitment.manage"  requiredModule="hr"><HrRecruitmentPage /></RequireAuth>} />
       <Route path="/hr/expense-claims" element={<RequireAuth requiredModule="hr"><HrExpenseClaimsPage /></RequireAuth>} />
       <Route path="/hr/benefits"       element={<RequireAuth permission="hr.benefits.manage"     requiredModule="hr"><HrBenefitsPage /></RequireAuth>} />
       <Route path="/hr/end-of-service" element={<RequireAuth permission="hr.benefits.manage"     requiredModule="hr"><HrEndBenefitsPage /></RequireAuth>} />
+      <Route path="/hospital/lab/catalog"      element={<RequireAuth permission="hospital.lab.manage" requiredModule="hospital"><LabTestCatalogPage /></RequireAuth>} />
+      <Route path="/hospital/lab/orders"      element={<RequireAuth requiredModule="hospital"><LabOrdersPage /></RequireAuth>} />
+      <Route path="/hospital/lab/commissions" element={<RequireAuth permission="hospital.lab.manage" requiredModule="hospital"><LabDoctorCommissionsPage /></RequireAuth>} />
+      <Route path="/hospital/pharmacy"       element={<RequireAuth requiredModule="hospital"><PharmacyPosPage /></RequireAuth>} />
+      <Route path="/hospital/pharmacy/settings" element={<RequireAuth permission="hospital.patient.manage" requiredModule="hospital"><PharmacySettingsPage /></RequireAuth>} />
       <Route path="/restaurant/tables"     element={<RequireAuth requiredModule="restaurant"><RestaurantTablesPage /></RequireAuth>} />
       <Route path="/restaurant/order/:sessionId" element={<RequireAuth permission="restaurant.order.manage" requiredModule="restaurant"><RestaurantOrderPage /></RequireAuth>} />
       <Route path="/restaurant/kds"        element={<RequireAuth permission="restaurant.kds.view" requiredModule="restaurant"><RestaurantKdsPage /></RequireAuth>} />

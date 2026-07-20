@@ -20,14 +20,17 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(path: string, options: RequestInit & { body?: unknown } = {}): Promise<T> {
   const token = getAccessToken();
+  const { body, ...rest } = options;
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...rest,
+    ...(body !== undefined ? { body: typeof body === 'string' ? body : JSON.stringify(body) } : {}),
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
+      ...rest.headers,
     },
   });
 

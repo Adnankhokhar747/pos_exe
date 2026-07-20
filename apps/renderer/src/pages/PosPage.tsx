@@ -598,9 +598,8 @@ export function PosPage(): JSX.Element {
           <Typography variant="subtitle2" fontWeight={700} fontSize="0.82rem" gutterBottom>
             Cart
           </Typography>
-          {/* When hospital module is enabled, show patient selector only.
-              Walk-in customer is still auto-applied behind the scenes. */}
-          {patientsQuery.isSuccess ? (
+          {/* Patient selector when hospital module is enabled; customer selector otherwise. */}
+          {isModuleEnabled('hospital') ? (
             <Autocomplete
               size="small"
               fullWidth
@@ -608,9 +607,15 @@ export function PosPage(): JSX.Element {
               getOptionLabel={(p) =>
                 `${p.name}${Number(p.currentBalance) > 0 ? ` (Advance: ${cur}${Number(p.currentBalance).toLocaleString()})` : ''}`
               }
+              filterOptions={(opts, state) => {
+                const q = state.inputValue.toLowerCase();
+                return opts.filter(p =>
+                  p.name.toLowerCase().includes(q) || (p.phone ?? '').toLowerCase().includes(q)
+                );
+              }}
               value={linkedPatient}
               onChange={(_, value) => { setLinkedPatient(value); setPatientAdvanceAmount(''); }}
-              renderInput={(params) => <TextField {...params} label="Patient (deduct from advance)" />}
+              renderInput={(params) => <TextField {...params} label="Patient (optional)" placeholder="Search name or phone…" />}
               sx={{ mb: 1 }}
             />
           ) : (

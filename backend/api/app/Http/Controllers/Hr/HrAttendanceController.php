@@ -195,6 +195,58 @@ class HrAttendanceController extends Controller
         return response()->json($this->format($record->load('employee:id,name,employee_code')));
     }
 
+    /**
+     * Bulk upsert attendance records for multiple employees on a single date.
+     */
+    public function bulkUpsert(Request $request)
+    {
+        $request->validate([
+            'records'            => 'required|array|min:1',
+            'records.*.employeeId' => 'required|uuid',
+            'records.*.workDate'   => 'required|date',
+            'records.*.status'     => 'required|in:present,absent,late,half_day,on_leave',
+            'records.*.clockIn'    => 'nullable|date_format:Y-m-d H:i',
+            'records.*.clockOut'   => 'nullable|date_format:Y-m-d H:i',
+            'records.*.notes'      => 'nullable|string|max:255',
+        ]);
+
+        $tenantId = $request->user()->tenant_id;
+        $results  = [];
+
+        foreach ($request->records as $row) {
+            $emp = HrEmployee::where('tenant_id', $tenantId)->find($row['employeeId']);
+            if (!$emp) continue;
+
+            $workMinutes = null;
+            $overMinutes = 0;
+            if (!empty($row['clockIn']) && !empty($row['clockOut'])) {
+                $ci = Carbon::parse($row['clockIn']);
+                $co = Carbon::parse($row['clockOut']);
+                $workMinutes = (int) $ci->diffInMinutes($co);
+                $overMinutes = max(0, $workMinutes - 480);
+            }
+
+            $record = HrAttendance::updateOrCreate(
+                ['employee_id' => $emp->id, 'work_date' => $row['workDate']],
+                [
+                    'id'               => (string) Str::uuid(),
+                    'tenant_id'        => $tenantId,
+                    'clock_in'         => $row['clockIn'] ?? null,
+                    'clock_out'        => $row['clockOut'] ?? null,
+                    'status'           => $row['status'],
+                    'work_minutes'     => $workMinutes,
+                    'overtime_minutes' => $overMinutes,
+                    'notes'            => $row['notes'] ?? null,
+                    'created_by'       => $request->user()->id,
+                ]
+            );
+
+            $results[] = $this->format($record->load('employee:id,name,employee_code'));
+        }
+
+        return response()->json($results);
+    }
+
     private function format(HrAttendance $a): array
     {
         return [

@@ -43,6 +43,7 @@ import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 import PointOfSaleTwoToneIcon from '@mui/icons-material/PointOfSaleTwoTone';
 import TableRestaurantIcon from '@mui/icons-material/TableRestaurant';
 import KitchenIcon from '@mui/icons-material/Kitchen';
@@ -55,6 +56,11 @@ import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import WorkIcon from '@mui/icons-material/Work';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import ScienceIcon from '@mui/icons-material/Science';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import LocalPharmacyIcon from '@mui/icons-material/LocalPharmacy';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../state/auth-context';
 import { useLicense } from '../state/license-context';
@@ -134,7 +140,13 @@ const NAV_GROUPS: NavGroup[] = [
       { path: '/hospital/patients',     label: 'Patients',      icon: <BadgeIcon fontSize="small" />,            requiredPermission: 'hospital.patient.manage',     requiredModule: 'hospital' },
       { path: '/hospital/appointments', label: 'Appointments',  icon: <EventAvailableIcon fontSize="small" />,   requiredPermission: 'hospital.appointment.manage', requiredModule: 'hospital' },
       { path: '/hospital/queue',        label: 'Token Queue',   icon: <ConfirmationNumberIcon fontSize="small" />,                                                   requiredModule: 'hospital' },
-      { path: '/hospital/reports',      label: 'Doctor Reports',icon: <SummarizeIcon fontSize="small" />,        requiredPermission: 'hospital.report.view',        requiredModule: 'hospital' },
+      { path: '/hospital/reports',             label: 'Doctor Reports',      icon: <SummarizeIcon fontSize="small" />,       requiredPermission: 'hospital.report.view', requiredModule: 'hospital' },
+      { path: '/hospital/checkup-commissions', label: 'Checkup Commissions', icon: <MedicalServicesIcon fontSize="small" />, requiredPermission: 'hospital.report.view', requiredModule: 'hospital' },
+      { path: '/hospital/lab/catalog',         label: 'Lab Catalog',         icon: <ScienceIcon fontSize="small" />,         requiredPermission: 'hospital.lab.manage',  requiredModule: 'hospital' },
+      { path: '/hospital/lab/orders',      label: 'Lab Orders',      icon: <AssignmentIcon fontSize="small" />,       requiredModule: 'hospital' },
+      { path: '/hospital/lab/commissions', label: 'Lab Commissions', icon: <MonetizationOnIcon fontSize="small" />, requiredPermission: 'hospital.lab.manage', requiredModule: 'hospital' },
+      { path: '/hospital/pharmacy',        label: 'Pharmacy POS',    icon: <LocalPharmacyIcon fontSize="small" />,  requiredModule: 'hospital' },
+      { path: '/hospital/pharmacy/settings', label: 'Pharmacy Settings', icon: <LocalPharmacyIcon fontSize="small" />, requiredPermission: 'hospital.patient.manage', requiredModule: 'hospital' },
     ],
   },
   {
@@ -173,6 +185,7 @@ const NAV_GROUPS: NavGroup[] = [
       { path: '/hr/attendance', label: 'Attendance',  icon: <EventAvailableIcon fontSize="small" />,        requiredModule: 'hr' },
       { path: '/hr/leaves',     label: 'Leaves',      icon: <BeachAccessIcon fontSize="small" />,           requiredPermission: 'hr.leave.manage',     requiredModule: 'hr' },
       { path: '/hr/payroll',        label: 'Payroll',        icon: <AccountBalanceWalletIcon fontSize="small" />,  requiredPermission: 'hr.payroll.manage',       requiredModule: 'hr' },
+      { path: '/hr/advances',       label: 'Advances',       icon: <MoneyOffIcon fontSize="small" />,              requiredPermission: 'hr.payroll.manage',       requiredModule: 'hr' },
       { path: '/hr/reports',        label: 'HR Reports',     icon: <AssessmentIcon fontSize="small" />,            requiredPermission: 'hr.report.view',          requiredModule: 'hr' },
       { path: '/hr/recruitment',    label: 'Recruitment',    icon: <WorkIcon fontSize="small" />,                  requiredPermission: 'hr.recruitment.manage',   requiredModule: 'hr' },
       { path: '/hr/expense-claims', label: 'Expense Claims', icon: <ReceiptLongIcon fontSize="small" />,           requiredModule: 'hr' },

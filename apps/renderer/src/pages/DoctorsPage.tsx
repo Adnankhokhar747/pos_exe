@@ -20,6 +20,8 @@ const EMPTY_FORM = {
   email: '',
   roomNumber: '',
   consultationFee: '0',
+  labCommissionPct: '0',
+  checkupCommissionPct: '0',
   linkedUserId: '',
   maxDailyAppointments: '30',
 };
@@ -135,6 +137,8 @@ export function DoctorsPage(): JSX.Element {
       email: doctor.email ?? '',
       roomNumber: doctor.roomNumber ?? '',
       consultationFee: doctor.consultationFee,
+      labCommissionPct: String(doctor.labCommissionPct ?? 0),
+      checkupCommissionPct: String(doctor.checkupCommissionPct ?? 0),
       linkedUserId: doctor.linkedUserId ?? '',
       maxDailyAppointments: String(doctor.maxDailyAppointments ?? 30),
     });
@@ -227,6 +231,7 @@ export function DoctorsPage(): JSX.Element {
             sortValue: (d) => Number(d.consultationFee),
             render: (d) => `$${Number(d.consultationFee).toFixed(2)}`,
           },
+          { key: 'labCommissionPct', label: 'Lab Comm %', align: 'right', render: (d) => `${Number(d.labCommissionPct ?? 0).toFixed(1)}%` },
           { key: 'linkedUser', label: 'Linked User', render: (d) => d.linkedUser?.fullName ?? '—' },
           {
             key: 'isActive',
@@ -284,6 +289,26 @@ export function DoctorsPage(): JSX.Element {
             value={form.consultationFee}
             onChange={(e) => setForm({ ...form, consultationFee: e.target.value })}
           />
+          <Stack direction="row" spacing={2}>
+            <TextField
+              fullWidth
+              label="Lab Commission %"
+              type="number"
+              value={form.labCommissionPct}
+              onChange={(e) => setForm({ ...form, labCommissionPct: e.target.value })}
+              helperText="% of lab order total paid to this doctor"
+              inputProps={{ min: 0, max: 100, step: 0.5 }}
+            />
+            <TextField
+              fullWidth
+              label="Checkup Commission %"
+              type="number"
+              value={form.checkupCommissionPct}
+              onChange={(e) => setForm({ ...form, checkupCommissionPct: e.target.value })}
+              helperText="% of consultation fee (future use)"
+              inputProps={{ min: 0, max: 100, step: 0.5 }}
+            />
+          </Stack>
           <TextField
             label="Max Appointments Per Day"
             type="number"
@@ -340,6 +365,26 @@ export function DoctorsPage(): JSX.Element {
             value={editForm.consultationFee}
             onChange={(e) => setEditForm({ ...editForm, consultationFee: e.target.value })}
           />
+          <Stack direction="row" spacing={2}>
+            <TextField
+              fullWidth
+              label="Lab Commission %"
+              type="number"
+              value={editForm.labCommissionPct}
+              onChange={(e) => setEditForm({ ...editForm, labCommissionPct: e.target.value })}
+              helperText="% of lab order total paid to this doctor"
+              inputProps={{ min: 0, max: 100, step: 0.5 }}
+            />
+            <TextField
+              fullWidth
+              label="Checkup Commission %"
+              type="number"
+              value={editForm.checkupCommissionPct}
+              onChange={(e) => setEditForm({ ...editForm, checkupCommissionPct: e.target.value })}
+              helperText="% of consultation fee (future use)"
+              inputProps={{ min: 0, max: 100, step: 0.5 }}
+            />
+          </Stack>
           <TextField
             label="Max Appointments Per Day"
             type="number"

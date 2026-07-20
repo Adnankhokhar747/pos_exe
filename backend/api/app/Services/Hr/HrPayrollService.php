@@ -2,6 +2,7 @@
 
 namespace App\Services\Hr;
 
+use App\Models\HrAdvance;
 use App\Models\HrEmployee;
 use App\Models\HrAttendance;
 use App\Models\HrLeave;
@@ -65,7 +66,7 @@ class HrPayrollService
             HrPayslip::create($payslip);
 
             $totalGross      += $payslip['gross_salary'];
-            $totalDeductions += $payslip['absent_deduction'] + $payslip['unpaid_leave_deduction'] + $payslip['late_deduction'] + $payslip['other_deductions'];
+            $totalDeductions += $payslip['absent_deduction'] + $payslip['unpaid_leave_deduction'] + $payslip['late_deduction'] + $payslip['other_deductions'] + $payslip['advance_deduction'];
             $totalNet        += $payslip['net_salary'];
         }
 
@@ -129,12 +130,28 @@ class HrPayrollService
         $lateDeduction       = round($hourlyRate * 0.5 * $lateCount, 2);
         $overtimePay         = round($hourlyRate * (float)$emp->overtime_rate * $overtimeHours, 2);
 
+        // Active salary advances for this employee
+        $advances = HrAdvance::where('employee_id', $emp->id)
+            ->where('status', 'active')
+            ->get();
+
+        $advanceDeduction = 0.0;
+        foreach ($advances as $advance) {
+            if ($advance->deduction_type === 'full_once') {
+                $advanceDeduction += (float) $advance->remaining_balance;
+            } else {
+                $advanceDeduction += min((float) $advance->monthly_installment, (float) $advance->remaining_balance);
+            }
+        }
+        $advanceDeduction = round($advanceDeduction, 2);
+
         $netSalary = round(
             $grossSalary
             + $overtimePay
             - $absentDeduction
             - $unpaidLeaveDeduction
-            - $lateDeduction,
+            - $lateDeduction
+            - $advanceDeduction,
             2
         );
 
@@ -161,6 +178,7 @@ class HrPayrollService
             'unpaid_leave_deduction' => $unpaidLeaveDeduction,
             'late_deduction'         => $lateDeduction,
             'other_deductions'       => 0.0,
+            'advance_deduction'      => $advanceDeduction,
             'overtime_pay'           => $overtimePay,
             'net_salary'             => max(0, $netSalary),
             'status'                 => 'draft',

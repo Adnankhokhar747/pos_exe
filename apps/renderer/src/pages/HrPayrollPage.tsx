@@ -38,6 +38,7 @@ function SlipDialog({ payslip, onClose }: { payslip: HrPayslip; onClose: () => v
     + (payslip.unpaidLeaveDeduction ?? 0)
     + (payslip.lateDeduction ?? 0)
     + (payslip.otherDeductions ?? 0)
+    + (payslip.advanceDeduction ?? 0)
     + (payslip.taxAmount ?? 0);
 
   const printSlip = () => {
@@ -87,6 +88,7 @@ function SlipDialog({ payslip, onClose }: { payslip: HrPayslip; onClose: () => v
       <tr><td>Unpaid Leave Deduction</td><td class="right">${f(payslip.unpaidLeaveDeduction)}</td></tr>
       <tr><td>Late Deduction</td><td class="right">${f(payslip.lateDeduction)}</td></tr>
       <tr><td>Other Deductions</td><td class="right">${f(payslip.otherDeductions)}</td></tr>
+      ${(payslip.advanceDeduction ?? 0) > 0 ? `<tr><td>Advance Deduction</td><td class="right">${f(payslip.advanceDeduction)}</td></tr>` : ''}
       ${payslip.taxAmount ? `<tr><td>Tax Deducted</td><td class="right">${f(payslip.taxAmount)}</td></tr>` : ''}
       <tr class="total-row"><td>Total Deductions</td><td class="right">${f(totalDeductions)}</td></tr></table>
       ${payslip.eosbProvision ? `<table><tr><th>Provisions</th><th class="right">Amount</th></tr>
@@ -149,6 +151,7 @@ function SlipDialog({ payslip, onClose }: { payslip: HrPayslip; onClose: () => v
                 ['Unpaid Leave', payslip.unpaidLeaveDeduction],
                 ['Late', payslip.lateDeduction],
                 ['Other', payslip.otherDeductions],
+                ...((payslip.advanceDeduction ?? 0) > 0 ? [['Advance', payslip.advanceDeduction]] : []),
                 ...(payslip.taxAmount ? [['Tax', payslip.taxAmount]] : []),
               ].map(([label, val]) => (
                 <TableRow key={String(label)}>
@@ -330,7 +333,7 @@ export function HrPayrollPage(): JSX.Element {
                     {cur.fmt((ps.overtimePay ?? 0) + (ps.performanceBonus ?? 0) + (ps.expenseReimbursement ?? 0))}
                   </TableCell>
                   <TableCell align="right" sx={{ color: 'error.main' }}>
-                    {cur.fmt((ps.absentDeduction ?? 0) + (ps.unpaidLeaveDeduction ?? 0) + (ps.lateDeduction ?? 0) + (ps.otherDeductions ?? 0) + (ps.taxAmount ?? 0))}
+                    {cur.fmt((ps.absentDeduction ?? 0) + (ps.unpaidLeaveDeduction ?? 0) + (ps.lateDeduction ?? 0) + (ps.otherDeductions ?? 0) + (ps.advanceDeduction ?? 0) + (ps.taxAmount ?? 0))}
                   </TableCell>
                   <TableCell align="right"><Typography fontWeight={700}>{cur.fmt(ps.netSalary)}</Typography></TableCell>
                   <TableCell>

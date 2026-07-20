@@ -16,7 +16,7 @@ trait SeedsSystemRoles
             'Accountant'       => ['report.view','expense.manage','cash.manage','invoice.void','settings.manage'],
             'Receptionist'     => ['hospital.patient.manage','hospital.appointment.manage','hospital.appointment.viewAll'],
             'Doctor'           => ['hospital.appointment.manage'],
-            'Hospital Manager' => ['hospital.doctor.manage','hospital.patient.manage','hospital.appointment.manage','hospital.appointment.viewAll','hospital.report.view'],
+            'Hospital Manager' => ['hospital.doctor.manage','hospital.patient.manage','hospital.appointment.manage','hospital.appointment.viewAll','hospital.report.view','hospital.lab.manage','hospital.lab.results'],
             'HR Manager'          => ['hr.employee.manage','hr.attendance.manage','hr.leave.manage','hr.payroll.manage','hr.report.view','hr.recruitment.manage','hr.expense.manage','hr.benefits.manage'],
             'Waiter'              => ['restaurant.order.manage','restaurant.split.manage'],
             'Kitchen Staff'       => ['restaurant.kds.view'],

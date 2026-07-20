@@ -581,9 +581,59 @@ export interface Doctor {
   roomNumber: string | null;
   consultationFee: string;
   maxDailyAppointments: number;
+  labCommissionPct: number;
+  checkupCommissionPct: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LabDoctorCommissionSummary {
+  doctorId: string;
+  doctorName: string;
+  specialization: string | null;
+  labCommissionPct: number;
+  ordersCount: number;
+  totalLabAmount: number;
+  commissionEarned: number;
+  totalPaid: number;
+  balanceDue: number;
+}
+
+export interface LabCommissionPayment {
+  id: string;
+  tenantId: string;
+  doctorId: string;
+  amount: number;
+  method: string;
+  notes: string | null;
+  paidAt: string;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface DoctorCheckupCommissionSummary {
+  doctorId: string;
+  doctorName: string;
+  specialization: string | null;
+  checkupCommissionPct: number;
+  appointmentsCount: number;
+  totalConsultation: number;
+  commissionEarned: number;
+  totalPaid: number;
+  balanceDue: number;
+}
+
+export interface CheckupCommissionPayment {
+  id: string;
+  tenantId: string;
+  doctorId: string;
+  amount: number;
+  method: string;
+  notes: string | null;
+  paidAt: string;
+  createdBy: string | null;
+  createdAt: string;
 }
 
 export interface DoctorSchedule {
@@ -944,6 +994,7 @@ export interface HrPayslip {
   unpaidLeaveDeduction: number;
   lateDeduction: number;
   otherDeductions: number;
+  advanceDeduction: number;
   overtimePay: number;
   performanceBonus: number;
   expenseReimbursement: number;
@@ -952,6 +1003,28 @@ export interface HrPayslip {
   taxAmount: number;
   netSalary: number;
   status: 'draft' | 'paid';
+}
+
+export type HrAdvanceDeductionType = 'full_once' | 'recurring';
+export type HrAdvanceStatus = 'active' | 'completed' | 'cancelled';
+
+export interface HrAdvance {
+  id: string;
+  tenantId: string;
+  employeeId: string;
+  employeeName: string | null;
+  employeeCode: string | null;
+  department: string | null;
+  amount: number;
+  remainingBalance: number;
+  deductionType: HrAdvanceDeductionType;
+  monthlyInstallment: number | null;
+  totalInstallments: number | null;
+  installmentsPaid: number;
+  status: HrAdvanceStatus;
+  issuedDate: string;
+  notes: string | null;
+  createdAt: string | null;
 }
 
 // ─── HR Extended Module ────────────────────────────────────────────────────────
@@ -1077,6 +1150,75 @@ export interface HrEndOfServiceRecord {
   qualifyingYears: number;
   eosbAmount: number;
   calculationNotes: string | null;
+  createdAt: string;
+}
+
+// ─── Lab Module ───────────────────────────────────────────────────────────────
+
+export type LabResultFlag = 'normal' | 'low' | 'high' | 'critical_low' | 'critical_high' | 'abnormal' | 'pending';
+export type LabOrderStatus = 'pending' | 'sample_collected' | 'processing' | 'completed' | 'cancelled';
+export type LabItemStatus = 'pending' | 'sample_collected' | 'resulted' | 'verified';
+
+export interface LabTest {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  category: string | null;
+  unit: string | null;
+  normalRange: string | null;
+  price: number;
+  turnaroundHrs: number;
+  isActive: boolean;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface LabResult {
+  id: string;
+  orderItemId: string;
+  orderId: string;
+  patientId: string;
+  resultValue: string;
+  resultFlag: LabResultFlag;
+  remarks: string | null;
+  enteredBy: string | null;
+  verifiedBy: string | null;
+  createdAt: string;
+}
+
+export interface LabOrderItem {
+  id: string;
+  orderId: string;
+  testId: string;
+  testCode: string;
+  testName: string;
+  unit: string | null;
+  normalRange: string | null;
+  price: number;
+  status: LabItemStatus;
+  collectedAt: string | null;
+  resultedAt: string | null;
+  verifiedAt: string | null;
+  result?: LabResult;
+}
+
+export interface LabOrder {
+  id: string;
+  tenantId: string;
+  orderNumber: string;
+  patientId: string;
+  patient?: { id: string; name: string; phone: string | null };
+  appointmentId: string | null;
+  doctorId: string | null;
+  doctor?: { id: string; name: string };
+  orderedBy: string | null;
+  status: LabOrderStatus;
+  priority: 'routine' | 'urgent' | 'stat';
+  totalAmount: number;
+  notes: string | null;
+  itemsCount?: number;
+  items?: LabOrderItem[];
   createdAt: string;
 }
 
