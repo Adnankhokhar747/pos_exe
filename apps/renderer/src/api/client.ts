@@ -20,7 +20,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, options: RequestInit & { body?: unknown } = {}): Promise<T> {
+export async function apiFetch<T>(path: string, options: Omit<RequestInit, 'body'> & { body?: unknown } = {}): Promise<T> {
   const token = getAccessToken();
   const { body, ...rest } = options;
   const response = await fetch(`${API_BASE_URL}${path}`, {

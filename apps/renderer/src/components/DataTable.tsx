@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   Box,
+  CircularProgress,
   Stack,
   Table,
   TableBody,
@@ -44,6 +45,7 @@ interface DataTableProps<T> {
   /** Extra controls (filter buttons, date pickers, etc.) rendered next to the search box. */
   toolbar?: ReactNode;
   dense?: boolean;
+  isLoading?: boolean;
 }
 
 // Shared table primitive: sticky header, client-side sort/search/pagination,
@@ -65,6 +67,7 @@ export function DataTable<T>({
   hideSearch = false,
   toolbar,
   dense = true,
+  isLoading = false,
 }: DataTableProps<T>): JSX.Element {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string | undefined>(defaultSortKey);
@@ -183,7 +186,14 @@ export function DataTable<T>({
                 </TableRow>
               );
             })}
-            {pagedRows.length === 0 && (
+            {isLoading && (
+              <TableRow>
+                <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
+                  <CircularProgress size={28} />
+                </TableCell>
+              </TableRow>
+            )}
+            {!isLoading && pagedRows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary" variant="body2">
